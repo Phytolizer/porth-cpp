@@ -2,6 +2,7 @@
 
 #include "porth/op.hpp"
 
+#include <algorithm>
 #include <fstream>
 #include <sstream>
 #include <stack>
@@ -24,8 +25,7 @@ std::vector<porth::Token> lexLine(const std::string& filePath, const size_t line
 struct LexedLine {
     size_t lineNumber;
     std::vector<porth::Token> line;
-    constexpr LexedLine(const size_t lineNumber, std::vector<porth::Token> line)
-        : lineNumber(lineNumber), line(std::move(line)) {
+    LexedLine(const size_t lineNumber, std::vector<porth::Token> line) : lineNumber(lineNumber), line(std::move(line)) {
     }
 };
 
