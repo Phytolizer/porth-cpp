@@ -1,5 +1,7 @@
 #include "porth/op.hpp"
 
+#include "iota_generated/op_id.hpp"
+
 porth::Op::Op(const OpId id) : id(id), operand(0) {
 }
 
@@ -44,4 +46,12 @@ porth::Op porth::dump() {
 
 porth::Op porth::dup() {
     return Op{OpIds::Dup};
+}
+
+porth::Op porth::wile() {
+    return Op{OpIds::While};
+}
+
+porth::Op porth::doo() {
+    return Op{OpIds::Do};
 }

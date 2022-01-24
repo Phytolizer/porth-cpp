@@ -23,5 +23,7 @@ Op elze();
 Op end();
 Op dump();
 Op dup();
+Op wile();
+Op doo();
 
 } // namespace porth

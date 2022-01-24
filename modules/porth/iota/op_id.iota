@@ -9,4 +9,6 @@ porth::OpId = iota {
     End,
     Dump,
     Dup,
+    While,
+    Do,
 };

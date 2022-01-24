@@ -23,7 +23,7 @@ template <typename T> T vecPop(std::vector<T>& v) {
 }
 
 void simulateProgram(const std::vector<porth::Op>& program) {
-    static_assert(porth::OpIds::Count.discriminant == 10, "Exhaustive handling of OpIds in simulateProgram");
+    static_assert(porth::OpIds::Count.discriminant == 12, "Exhaustive handling of OpIds in simulateProgram");
     std::vector<std::int64_t> stack;
     // execution is not linear, so we use a for loop with an index
     for (size_t ip = 0; ip < program.size();) {
@@ -58,8 +58,7 @@ void simulateProgram(const std::vector<porth::Op>& program) {
         } else if (op.id == porth::OpIds::Else) {
             ip = static_cast<size_t>(op.operand);
         } else if (op.id == porth::OpIds::End) {
-            // nothing. end is just a marker for crossReferenceBlocks, not an actual opcode
-            ++ip;
+            ip = static_cast<size_t>(op.operand);
         } else if (op.id == porth::OpIds::Dump) {
             std::cout << stack.back() << "\n";
             ++ip;
@@ -67,6 +66,15 @@ void simulateProgram(const std::vector<porth::Op>& program) {
             const std::int64_t a = stack.back();
             stack.push_back(a);
             ++ip;
+        } else if (op.id == porth::OpIds::While) {
+            ++ip;
+        } else if (op.id == porth::OpIds::Do) {
+            const std::int64_t a = vecPop(stack);
+            if (a == 0) {
+                ip = static_cast<size_t>(op.operand);
+            } else {
+                ++ip;
+            }
         }
     }
 }
@@ -96,7 +104,7 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
     emit(output, indent) << "int main() {\n";
     ++indent;
     emit(output, indent) << "std::stack<int> s;\n";
-    static_assert(porth::OpIds::Count.discriminant == 10, "Exhaustive handling of OpIds in compileProgram");
+    static_assert(porth::OpIds::Count.discriminant == 12, "Exhaustive handling of OpIds in compileProgram");
     for (size_t ip = 0; ip < program.size(); ++ip) {
         const porth::Op& op = program[ip];
         emit(output, indent) << "// -- " << op.id.name << " --\n";
@@ -154,6 +162,8 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
             emit(output, indent) << "}\n";
             --indent;
             emit(output, indent) << "}\n";
+        } else if (op.id == porth::OpIds::Else) {
+            emit(output, indent) << "goto " << labelName(op.operand) << ";\n";
         } else if (op.id == porth::OpIds::End) {
             output << labelName(static_cast<std::int64_t>(ip)) << ":\n";
         } else if (op.id == porth::OpIds::Dump) {
@@ -163,6 +173,20 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
             ++indent;
             emit(output, indent) << "auto a = s.top();\n";
             emit(output, indent) << "s.push(a);\n";
+            --indent;
+            emit(output, indent) << "}\n";
+        } else if (op.id == porth::OpIds::While) {
+            // nothing. just an anchor for the condition.
+        } else if (op.id == porth::OpIds::Do) {
+            emit(output, indent) << "{\n";
+            ++indent;
+            emit(output, indent) << "auto a = s.top();\n";
+            emit(output, indent) << "s.pop();\n";
+            emit(output, indent) << "if (a == 0) {\n";
+            ++indent;
+            emit(output, indent) << "goto " << labelName(op.operand) << ";\n";
+            --indent;
+            emit(output, indent) << "}\n";
             --indent;
             emit(output, indent) << "}\n";
         }
@@ -333,7 +357,7 @@ UnconsArgs uncons(std::span<char*> args) {
 
 porth::Op parseTokenAsOp(const porth::Token& token) {
     const auto& [filePath, row, col, word] = token;
-    static_assert(porth::OpIds::Count.discriminant == 10, "Exhaustive handling of OpIds in parseTokenAsOp");
+    static_assert(porth::OpIds::Count.discriminant == 12, "Exhaustive handling of OpIds in parseTokenAsOp");
     if (word == "+") {
         return porth::plus();
     }
@@ -361,6 +385,12 @@ porth::Op parseTokenAsOp(const porth::Token& token) {
     if (word == "dup") {
         return porth::dup();
     }
+    if (word == "while") {
+        return porth::wile();
+    }
+    if (word == "do") {
+        return porth::doo();
+    }
     int pushArg;
     if (std::istringstream wordStream{word}; !(wordStream >> pushArg)) {
         std::cerr << filePath << ":" << row << ":" << col << ": attempt to convert non-integer value\n";
@@ -377,7 +407,7 @@ template <typename T> T stackPop(std::stack<T>& stack) {
 
 std::vector<porth::Op> crossReferenceBlocks(std::vector<porth::Op>&& program) {
     std::stack<size_t> stack;
-    static_assert(porth::OpIds::Count.discriminant == 10, "Exhaustive handling of OpIds in crossReferenceBlocks");
+    static_assert(porth::OpIds::Count.discriminant == 12, "Exhaustive handling of OpIds in crossReferenceBlocks");
     for (size_t ip = 0; ip < program.size(); ++ip) {
         if (const porth::Op& op = program[ip]; op.id == porth::OpIds::If) {
             stack.push(ip);
@@ -389,9 +419,19 @@ std::vector<porth::Op> crossReferenceBlocks(std::vector<porth::Op>&& program) {
             if (const size_t blockIp = stackPop(stack);
                 program[blockIp].id == porth::OpIds::If || program[blockIp].id == porth::OpIds::Else) {
                 program[blockIp].operand = static_cast<std::int64_t>(ip);
+                program[ip].operand = ip + 1;
+            } else if (program[blockIp].id == porth::OpIds::Do) {
+                program[ip].operand = program[blockIp].operand;
+                program[blockIp].operand = static_cast<std::int64_t>(ip) + 1;
             } else {
-                throw std::runtime_error{"`end` can only close if/else blocks for now"};
+                throw std::runtime_error{"`end` can only close if and while blocks for now"};
             }
+        } else if (op.id == porth::OpIds::While) {
+            stack.push(ip);
+        } else if (op.id == porth::OpIds::Do) {
+            const size_t whileIp = stackPop(stack);
+            program[ip].operand = static_cast<std::int64_t>(whileIp);
+            stack.push(ip);
         }
     }
     return program;
