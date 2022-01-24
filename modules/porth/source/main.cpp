@@ -1,6 +1,7 @@
 #include "porth/lexer.hpp"
 #include "porth/op.hpp"
 
+#include <cassert>
 #include <config.hpp>
 #include <fstream>
 #include <iostream>
@@ -24,6 +25,7 @@ constexpr size_t MEM_CAPACITY = 640'000;
 #endif
 
 template <typename T> T vecPop(std::vector<T>& v) {
+    assert(!v.empty() && "vecPop: empty vector");
     T result = std::move(v.back());
     v.pop_back();
     return result;
@@ -62,6 +64,8 @@ void simulateProgram(const std::vector<porth::Op>& program) {
             if (const std::int64_t a = vecPop(stack); a == 0) {
                 // simulate a goto
                 ip = static_cast<size_t>(op.operand);
+            } else {
+                ++ip;
             }
         } else if (op.id == porth::OpIds::Else) {
             ip = static_cast<size_t>(op.operand);

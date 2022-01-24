@@ -48,3 +48,17 @@ target_link_libraries(porth_cpp PRIVATE subprocess_h)
 target_include_directories(
     porth_cpp PRIVATE "modules/porth/include" "${PROJECT_BINARY_DIR}/include"
 )
+
+file(
+    GENERATE
+    OUTPUT "${PROJECT_BINARY_DIR}/include/testconfig.hpp"
+    CONTENT "#pragma once\n#define PORTH_CPP_EXE \"$<TARGET_FILE:porth_cpp>\"\n"
+)
+
+add_executable(
+    porth_test "modules/porth_test/source/main.cpp"
+               "${PROJECT_BINARY_DIR}/include/testconfig.hpp"
+)
+add_dependencies(porth_test porth_cpp)
+target_link_libraries(porth_test PRIVATE subprocess_h)
+target_include_directories(porth_test PRIVATE "${PROJECT_BINARY_DIR}/include")
