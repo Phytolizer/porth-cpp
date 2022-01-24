@@ -108,6 +108,7 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
     for (size_t ip = 0; ip < program.size(); ++ip) {
         const porth::Op& op = program[ip];
         emit(output, indent) << "// -- " << op.id.name << " --\n";
+        output << labelName(ip) << ":\n";
         if (op.id == porth::OpIds::Push) {
             emit(output, indent) << "s.push(" << op.operand << ");\n";
         } else if (op.id == porth::OpIds::Plus) {
@@ -165,7 +166,9 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
         } else if (op.id == porth::OpIds::Else) {
             emit(output, indent) << "goto " << labelName(op.operand) << ";\n";
         } else if (op.id == porth::OpIds::End) {
-            output << labelName(static_cast<std::int64_t>(ip)) << ":\n";
+            if (op.operand != static_cast<std::int64_t>(ip) + 1) {
+                emit(output, indent) << "goto " << labelName(op.operand) << ";\n";
+            }
         } else if (op.id == porth::OpIds::Dump) {
             emit(output, indent) << "std::cout << s.top() << \"\\n\";\n";
         } else if (op.id == porth::OpIds::Dup) {
@@ -191,6 +194,7 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
             emit(output, indent) << "}\n";
         }
     }
+    output << labelName(static_cast<std::int64_t>(program.size())) << ":\n";
     emit(output, indent) << "return 0;\n";
     --indent;
     emit(output, indent) << "}\n";
