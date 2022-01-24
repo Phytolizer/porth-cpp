@@ -1,2 +1,5 @@
 // Test operations relating to memory.
-mem .
+// The below does not work because memory addresses are not consistent between
+// simulation and compilation.
+
+// mem dump

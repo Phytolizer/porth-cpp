@@ -366,7 +366,7 @@ porth::Op parseTokenAsOp(const porth::Token& token) {
     if (word == ">") {
         return porth::gt();
     }
-    if (word == ".") {
+    if (word == "dump") {
         return porth::dump();
     }
     if (word == "if") {
@@ -462,7 +462,14 @@ int main(const int argc, char** argv) {
             return 1;
         }
         const char* inputFilePath = args[cursor++];
-        const std::vector<porth::Op> program = loadProgramFromFile(inputFilePath);
+        std::vector<porth::Op> program;
+        try {
+            program = loadProgramFromFile(inputFilePath);
+        } catch (std::runtime_error& e) {
+            std::cerr << "ERROR: " << e.what() << "\n";
+            return 1;
+        }
+
         simulateProgram(program);
     } else if (subcommand == "com"sv) {
         if (args.size() == cursor) {
@@ -499,7 +506,14 @@ int main(const int argc, char** argv) {
         } else {
             inputFilePath = inputFilePathOrFlag;
         }
-        const std::vector<porth::Op> program = loadProgramFromFile(inputFilePath);
+        std::vector<porth::Op> program;
+        try {
+            program = loadProgramFromFile(inputFilePath);
+        } catch (std::runtime_error& e) {
+            std::cerr << "ERROR: " << e.what() << "\n";
+            return 1;
+        }
+
         const std::string cppOutputFilePath = std::string{PROJECT_BINARY_DIR} + "/output.cpp";
         if (const int ret = compileProgram(program, cppOutputFilePath); ret != 0) {
             return ret;
