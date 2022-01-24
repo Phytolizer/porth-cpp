@@ -20,6 +20,7 @@ target_include_directories(gsl INTERFACE "modules/gsl/include")
 
 add_library(span INTERFACE)
 target_include_directories(span INTERFACE "modules/span/include")
+target_link_libraries(span INTERFACE gsl)
 
 add_library(iota "modules/iota/source/iota.cpp")
 target_include_directories(iota PUBLIC "modules/iota/include")
