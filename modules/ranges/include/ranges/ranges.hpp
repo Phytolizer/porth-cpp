@@ -6,7 +6,15 @@
 
 namespace my_ranges = std::ranges;
 #else
-#include <range/v3/algorithm/copy.hpp>
+// DIY
 
-namespace my_ranges = ranges;
+#include <algorithm>
+
+namespace my_ranges {
+
+template <typename Range, typename OutputIterator> constexpr OutputIterator copy(Range&& range, OutputIterator output) {
+    return std::copy(range.begin(), range.end(), output);
+}
+
+} // namespace my_ranges
 #endif
