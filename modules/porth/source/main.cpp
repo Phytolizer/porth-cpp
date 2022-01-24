@@ -246,16 +246,15 @@ std::string replaceOrAppendExtension(
     return outFilePath + newExtension;
 }
 
-int tryBuild(const std::string& outFilePath) {
+int tryBuild(const std::string& cppOutputFilePath, const std::string& outFilePath) {
     const std::regex extensionPattern{"\\.cpp$"};
-    const std::string objPath = replaceOrAppendExtension(outFilePath, extensionPattern, ".obj");
-    const std::string exePath = replaceOrAppendExtension(outFilePath, extensionPattern, ".exe");
-    const std::string asmPath = replaceOrAppendExtension(outFilePath, extensionPattern, ".asm");
+    const std::string objPath = replaceOrAppendExtension(cppOutputFilePath, extensionPattern, ".obj");
+    const std::string asmPath = replaceOrAppendExtension(cppOutputFilePath, extensionPattern, ".asm");
 
 #ifdef _MSC_VER
     const std::string outArg = "-Fo" + objPath;
     const std::string asmArg = "-Fa" + asmPath;
-    const std::string exeArg = "-Fe" + exePath;
+    const std::string exeArg = "-Fe" + outFilePath;
     const char* clArgs[] = {
         "cl",
         "-nologo",           // suppress copyright message
@@ -286,7 +285,7 @@ int tryBuild(const std::string& outFilePath) {
         "-flto",
         "-march=native",
         "-fverbose-asm",
-        outFilePath.c_str(),
+        cppOutputFilePath.c_str(),
         "-o",
         asmPath.c_str(),
         nullptr,
@@ -303,7 +302,7 @@ int tryBuild(const std::string& outFilePath) {
         "-O2",
         "-march=native",
         "-c",
-        outFilePath.c_str(),
+        cppOutputFilePath.c_str(),
         "-o",
         objPath.c_str(),
         nullptr,
@@ -319,7 +318,7 @@ int tryBuild(const std::string& outFilePath) {
         "-march=native",
         objPath.c_str(),
         "-o",
-        exePath.c_str(),
+        outFilePath.c_str(),
         nullptr,
     };
     if (const int ret = tryRunSubprocess(linkArgs); ret != 0) {
@@ -331,11 +330,8 @@ int tryBuild(const std::string& outFilePath) {
 }
 
 int tryRunExecutable(const std::string& outFilePath) {
-    const std::regex extensionPattern{"\\.cpp$"};
-    const std::string exePath = replaceOrAppendExtension(outFilePath, extensionPattern, ".exe");
-
     const char* exeArgs[] = {
-        exePath.c_str(),
+        outFilePath.c_str(),
         nullptr,
     };
     return tryRunSubprocess(exeArgs);
@@ -451,61 +447,69 @@ std::vector<porth::Op> loadProgramFromFile(const std::string& inputFilePath) {
 
 int main(const int argc, char** argv) {
     const std::span args{argv, static_cast<size_t>(argc)};
-    const auto [thisProgram, args2] = uncons(args);
+    size_t cursor = 0;
+    const char* const thisProgram = args[cursor++];
 
-    if (args2.empty()) {
+    if (args.size() == cursor) {
         usage(thisProgram);
         std::cerr << "ERROR: no subcommand is provided\n";
         return 1;
     }
 
-    if (const auto [subcommand, args3] = uncons(args2); subcommand == "sim"sv) {
-        if (args3.empty()) {
+    if (const char* const subcommand = args[cursor++]; subcommand == "sim"sv) {
+        if (args.size() == cursor) {
             usage(thisProgram);
             std::cerr << "ERROR: no input file is provided for the simulation\n";
             return 1;
         }
-        const auto [inputFilePath, args4] = uncons(args3);
+        const char* inputFilePath = args[cursor++];
         const std::vector<porth::Op> program = loadProgramFromFile(inputFilePath);
         simulateProgram(program);
     } else if (subcommand == "com"sv) {
-        if (args3.empty()) {
+        if (args.size() == cursor) {
             usage(thisProgram);
             std::cerr << "ERROR: no input file is provided for the simulation\n";
             return 1;
         }
-        const auto [inputFilePathOrFlag, args4] = uncons(args3);
+        const char* inputFilePathOrFlag = args[cursor++];
         bool runExecutable = false;
         std::string inputFilePath;
-        std::span<char*> args5;
+        std::string outputFilePath = std::string{PROJECT_BINARY_DIR} + "/output.exe";
         if (inputFilePathOrFlag[0] == '-') {
-            char* const flag = inputFilePathOrFlag + 1;
-            if (flag == "r"sv) {
-                runExecutable = true;
-            } else {
-                std::cerr << "ERROR: unknown flag '" << inputFilePathOrFlag << "'\n";
-                return 1;
+            while (inputFilePathOrFlag[0] == '-') {
+                const char* const flag = inputFilePathOrFlag + 1;
+                if (flag == "r"sv) {
+                    runExecutable = true;
+                } else if (flag == "o"sv) {
+                    if (args.size() == cursor) {
+                        std::cerr << "ERROR: no argument is provided for '-o'\n";
+                        return 1;
+                    }
+                    outputFilePath = args[cursor++];
+                } else {
+                    std::cerr << "ERROR: unknown flag '" << inputFilePathOrFlag << "'\n";
+                    return 1;
+                }
+                if (args.size() == cursor) {
+                    std::cerr << "ERROR: no input file is provided for the simulation\n";
+                    return 1;
+                }
+                inputFilePathOrFlag = args[cursor++];
             }
-            if (args4.empty()) {
-                std::cerr << "ERROR: no input file is provided for the simulation\n";
-            }
-            const auto [tmpInputFilePath, tmpArgs5] = uncons(args4);
-            inputFilePath = tmpInputFilePath;
-            args5 = tmpArgs5;
+            inputFilePath = inputFilePathOrFlag;
         } else {
             inputFilePath = inputFilePathOrFlag;
-            args5 = args4;
         }
         const std::vector<porth::Op> program = loadProgramFromFile(inputFilePath);
-        const std::string outFilePath = std::string{PROJECT_BINARY_DIR} + "/output.cpp";
-        if (const int ret = compileProgram(program, outFilePath); ret != 0) {
+        const std::string cppOutputFilePath = std::string{PROJECT_BINARY_DIR} + "/output.cpp";
+        if (const int ret = compileProgram(program, cppOutputFilePath); ret != 0) {
             return ret;
         }
-        if (const int ret = tryBuild(outFilePath); ret != 0) {
+        if (const int ret = tryBuild(cppOutputFilePath, outputFilePath); ret != 0) {
             return ret;
         }
         if (runExecutable) {
-            if (const int ret = tryRunExecutable(outFilePath); ret != 0) {
+            if (const int ret = tryRunExecutable(outputFilePath); ret != 0) {
                 return ret;
             }
         }
