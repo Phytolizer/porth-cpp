@@ -16,7 +16,11 @@ std::vector<porth::Token> lexLine(const std::string& filePath, const size_t line
     auto col = trimLeft(line, line.begin());
     while (col != line.end()) {
         const auto colEnd = std::find_if(col, line.end(), [](const char c) { return std::isspace(c); });
-        result.emplace_back(filePath, lineNumber + 1, col - line.begin() + 1, std::string{col, colEnd});
+        std::string tokenText{col, colEnd};
+        if (tokenText == "//") {
+            break;
+        }
+        result.emplace_back(filePath, lineNumber + 1, col - line.begin() + 1, std::move(tokenText));
         col = trimLeft(line, colEnd);
     }
     return result;
