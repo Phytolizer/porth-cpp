@@ -23,7 +23,7 @@ template <typename T> T vecPop(std::vector<T>& v) {
 }
 
 void simulateProgram(const std::vector<porth::Op>& program) {
-    static_assert(porth::OpIds::Count.discriminant == 9, "Exhaustive handling of OpIds in simulateProgram");
+    static_assert(porth::OpIds::Count.discriminant == 10, "Exhaustive handling of OpIds in simulateProgram");
     std::vector<std::int64_t> stack;
     // execution is not linear, so we use a for loop with an index
     for (size_t ip = 0; ip < program.size();) {
@@ -44,6 +44,11 @@ void simulateProgram(const std::vector<porth::Op>& program) {
             const std::int64_t b = vecPop(stack);
             const std::int64_t a = vecPop(stack);
             stack.push_back(a == b ? 1 : 0);
+            ++ip;
+        } else if (op.id == porth::OpIds::Gt) {
+            const std::int64_t b = vecPop(stack);
+            const std::int64_t a = vecPop(stack);
+            stack.push_back(a > b ? 1 : 0);
             ++ip;
         } else if (op.id == porth::OpIds::If) {
             if (const std::int64_t a = vecPop(stack); a == 0) {
@@ -91,7 +96,7 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
     emit(output, indent) << "int main() {\n";
     ++indent;
     emit(output, indent) << "std::stack<int> s;\n";
-    static_assert(porth::OpIds::Count.discriminant == 9, "Exhaustive handling of OpIds in compileProgram");
+    static_assert(porth::OpIds::Count.discriminant == 10, "Exhaustive handling of OpIds in compileProgram");
     for (size_t ip = 0; ip < program.size(); ++ip) {
         const porth::Op& op = program[ip];
         emit(output, indent) << "// -- " << op.id.name << " --\n";
@@ -125,6 +130,16 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
             emit(output, indent) << "auto a = s.top();\n";
             emit(output, indent) << "s.pop();\n";
             emit(output, indent) << "s.push(a == b ? 1 : 0);\n";
+            --indent;
+            emit(output, indent) << "}\n";
+        } else if (op.id == porth::OpIds::Gt) {
+            emit(output, indent) << "{\n";
+            ++indent;
+            emit(output, indent) << "auto b = s.top();\n";
+            emit(output, indent) << "s.pop();\n";
+            emit(output, indent) << "auto a = s.top();\n";
+            emit(output, indent) << "s.pop();\n";
+            emit(output, indent) << "s.push(a > b ? 1 : 0);\n";
             --indent;
             emit(output, indent) << "}\n";
         } else if (op.id == porth::OpIds::If) {
@@ -287,6 +302,17 @@ int tryBuild(const std::string& outFilePath) {
     return 0;
 }
 
+int tryRunExecutable(const std::string& outFilePath) {
+    const std::regex extensionPattern{"\\.cpp$"};
+    const std::string exePath = replaceOrAppendExtension(outFilePath, extensionPattern, ".exe");
+
+    const char* exeArgs[] = {
+        exePath.c_str(),
+        nullptr,
+    };
+    return tryRunSubprocess(exeArgs);
+}
+
 void usage(const char* thisProgram) {
     std::cerr << "Usage: " << thisProgram << " <SUBCOMMAND> [ARGS]\n";
     std::cerr << "SUBCOMMANDS:\n";
@@ -307,7 +333,7 @@ UnconsArgs uncons(std::span<char*> args) {
 
 porth::Op parseTokenAsOp(const porth::Token& token) {
     const auto& [filePath, row, col, word] = token;
-    static_assert(porth::OpIds::Count.discriminant == 9, "Exhaustive handling of OpIds in parseTokenAsOp");
+    static_assert(porth::OpIds::Count.discriminant == 10, "Exhaustive handling of OpIds in parseTokenAsOp");
     if (word == "+") {
         return porth::plus();
     }
@@ -316,6 +342,9 @@ porth::Op parseTokenAsOp(const porth::Token& token) {
     }
     if (word == "=") {
         return porth::equal();
+    }
+    if (word == ">") {
+        return porth::gt();
     }
     if (word == ".") {
         return porth::dump();
@@ -348,7 +377,7 @@ template <typename T> T stackPop(std::stack<T>& stack) {
 
 std::vector<porth::Op> crossReferenceBlocks(std::vector<porth::Op>&& program) {
     std::stack<size_t> stack;
-    static_assert(porth::OpIds::Count.discriminant == 9, "Exhaustive handling of OpIds in crossReferenceBlocks");
+    static_assert(porth::OpIds::Count.discriminant == 10, "Exhaustive handling of OpIds in crossReferenceBlocks");
     for (size_t ip = 0; ip < program.size(); ++ip) {
         if (const porth::Op& op = program[ip]; op.id == porth::OpIds::If) {
             stack.push(ip);
@@ -401,7 +430,28 @@ int main(const int argc, char** argv) {
             std::cerr << "ERROR: no input file is provided for the simulation\n";
             return 1;
         }
-        const auto [inputFilePath, args4] = uncons(args3);
+        const auto [inputFilePathOrFlag, args4] = uncons(args3);
+        bool runExecutable = false;
+        std::string inputFilePath;
+        std::span<char*> args5;
+        if (inputFilePathOrFlag[0] == '-') {
+            char* const flag = inputFilePathOrFlag + 1;
+            if (flag == "r"sv) {
+                runExecutable = true;
+            } else {
+                std::cerr << "ERROR: unknown flag '" << inputFilePathOrFlag << "'\n";
+                return 1;
+            }
+            if (args4.empty()) {
+                std::cerr << "ERROR: no input file is provided for the simulation\n";
+            }
+            const auto [tmpInputFilePath, tmpArgs5] = uncons(args4);
+            inputFilePath = tmpInputFilePath;
+            args5 = tmpArgs5;
+        } else {
+            inputFilePath = inputFilePathOrFlag;
+            args5 = args4;
+        }
         const std::vector<porth::Op> program = loadProgramFromFile(inputFilePath);
         const std::string outFilePath = std::string{PROJECT_BINARY_DIR} + "/output.cpp";
         if (const int ret = compileProgram(program, outFilePath); ret != 0) {
@@ -409,6 +459,11 @@ int main(const int argc, char** argv) {
         }
         if (const int ret = tryBuild(outFilePath); ret != 0) {
             return ret;
+        }
+        if (runExecutable) {
+            if (const int ret = tryRunExecutable(outFilePath); ret != 0) {
+                return ret;
+            }
         }
     } else {
         usage(thisProgram);

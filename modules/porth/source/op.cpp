@@ -22,6 +22,10 @@ porth::Op porth::equal() {
     return Op{OpIds::Equal};
 }
 
+porth::Op porth::gt() {
+    return Op{OpIds::Gt};
+}
+
 porth::Op porth::iff() {
     return Op{OpIds::If};
 }
