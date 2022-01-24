@@ -15,12 +15,17 @@ set(CMAKE_CXX_STANDARD 20)
 
 configure_file("config.hpp.cin" "${PROJECT_BINARY_DIR}/include/config.hpp")
 
-# Add source to this project's executable.
+add_library(gsl INTERFACE)
+target_include_directories(gsl INTERFACE "modules/gsl/include")
+
+add_library(span INTERFACE)
+target_include_directories(span INTERFACE "modules/span/include")
+
 add_library(iota "modules/iota/source/iota.cpp")
 target_include_directories(iota PUBLIC "modules/iota/include")
 
 add_executable(iota_driver "modules/iota_driver/source/main.cpp")
-target_link_libraries(iota_driver PRIVATE iota)
+target_link_libraries(iota_driver PRIVATE iota span)
 
 add_custom_command(
     OUTPUT "${PROJECT_BINARY_DIR}/include/iota_generated/op_id.hpp"
@@ -44,7 +49,7 @@ add_executable(
     "modules/porth/source/op.cpp"
     "${PROJECT_BINARY_DIR}/include/iota_generated/op_id.hpp"
 )
-target_link_libraries(porth_cpp PRIVATE subprocess_h)
+target_link_libraries(porth_cpp PRIVATE subprocess_h span)
 target_include_directories(
     porth_cpp PRIVATE "modules/porth/include" "${PROJECT_BINARY_DIR}/include"
 )

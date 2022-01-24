@@ -7,7 +7,7 @@
 #include <iostream>
 #include <iota_generated/op_id.hpp>
 #include <regex>
-#include <span>
+#include <span/span.hpp>
 #include <sstream>
 #include <stack>
 #include <string_view>
@@ -353,12 +353,12 @@ void usage(const char* thisProgram) {
 
 struct UnconsArgs {
     char* first;
-    std::span<char*> rest;
-    constexpr UnconsArgs(char* first, const std::span<char*> rest) : first(first), rest(rest) {
+    span::Span<char*> rest;
+    constexpr UnconsArgs(char* first, const span::Span<char*> rest) : first(first), rest(rest) {
     }
 };
 
-UnconsArgs uncons(std::span<char*> args) {
+UnconsArgs uncons(span::Span<char*> args) {
     return {args[0], args.subspan(1)};
 }
 
@@ -456,7 +456,7 @@ std::vector<porth::Op> loadProgramFromFile(const std::string& inputFilePath) {
 }
 
 int main(const int argc, char** argv) {
-    const std::span args{argv, static_cast<size_t>(argc)};
+    const span::Span<char*> args{argv, static_cast<size_t>(argc)};
     size_t cursor = 0;
     const char* const thisProgram = args[cursor++];
 

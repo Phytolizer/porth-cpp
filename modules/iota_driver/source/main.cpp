@@ -1,10 +1,10 @@
 #include <fstream>
 #include <iostream>
 #include <iota/iota.hpp>
-#include <span>
+#include <span/span.hpp>
 
 int main(const int argc, char** argv) {
-    const std::span args{argv, static_cast<size_t>(argc)};
+    const span::Span<char*> args{argv, static_cast<size_t>(argc)};
     if (args.size() != 3) {
         std::cerr << "Usage: " << args[0] << " <inFile> <outFile>\n";
         return 1;
