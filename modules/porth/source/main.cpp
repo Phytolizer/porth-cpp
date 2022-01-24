@@ -171,25 +171,25 @@ int tryRunSubprocess(const char* const* args) {
     if (const int ret = subprocess_create(
             args,
             subprocess_option_inherit_environment | subprocess_option_no_window |
-                subprocess_option_combined_stdout_stderr,
+                subprocess_option_combined_stdout_stderr | subprocess_option_enable_async,
             &sub);
         ret != 0) {
         std::cerr << "ERROR: " << args[0] << " invocation failed\n";
         return ret;
     }
     subprocess::DestroyGuard dg{&sub};
+    char buffer[1024] = {};
+    size_t nread = 0;
+    while ((nread = subprocess_read_stdout(&sub, buffer, sizeof buffer)) > 0) {
+        std::cerr.write(buffer, nread);
+    }
     int code = 0;
     if (const int ret = subprocess_join(&sub, &code); ret != 0) {
         std::cerr << "ERROR: failed to wait on " << args[0] << " process\n";
         return ret;
     }
-    char buffer[1024] = {};
-    std::FILE* fp = subprocess_stdout(&sub);
-    while (fgets(buffer, sizeof buffer, fp) != nullptr) {
-        std::cout << buffer;
-    }
     if (code != 0) {
-        std::cerr << "ERROR: " << args[0] << " process reported failure with the above log\n";
+        std::cerr << "ERROR: " << args[0] << " returned non-zero exit code\n";
         return code;
     }
     return 0;
@@ -209,6 +209,7 @@ int tryBuild(const std::string& outFilePath) {
     const std::string exePath = replaceOrAppendExtension(outFilePath, extensionPattern, ".exe");
     const std::string asmPath = replaceOrAppendExtension(outFilePath, extensionPattern, ".asm");
 
+#ifdef _MSC_VER
     const std::string outArg = "-Fo" + objPath;
     const std::string asmArg = "-Fa" + asmPath;
     const std::string exeArg = "-Fe" + exePath;
@@ -230,6 +231,58 @@ int tryBuild(const std::string& outFilePath) {
     if (const int ret = tryRunSubprocess(clArgs); ret != 0) {
         return ret;
     }
+#else
+    const char* asmArgs[] = {
+        "/usr/bin/env",
+        "g++",
+        "-w",
+        "-xc++",
+        "-std=c++20",
+        "-O2",
+        "-S",
+        "-flto",
+        "-march=native",
+        "-fverbose-asm",
+        outFilePath.c_str(),
+        "-o",
+        asmPath.c_str(),
+        nullptr,
+    };
+    if (const int ret = tryRunSubprocess(asmArgs); ret != 0) {
+        return ret;
+    }
+    const char* objArgs[] = {
+        "/usr/bin/env",
+        "g++",
+        "-w",
+        "-xc++",
+        "-std=c++20",
+        "-O2",
+        "-march=native",
+        "-c",
+        outFilePath.c_str(),
+        "-o",
+        objPath.c_str(),
+        nullptr,
+    };
+    if (const int ret = tryRunSubprocess(objArgs); ret != 0) {
+        return ret;
+    }
+    const char* linkArgs[] = {
+        "/usr/bin/env",
+        "g++",
+        "-w",
+        "-flto",
+        "-march=native",
+        objPath.c_str(),
+        "-o",
+        exePath.c_str(),
+        nullptr,
+    };
+    if (const int ret = tryRunSubprocess(linkArgs); ret != 0) {
+        return ret;
+    }
+#endif
 
     return 0;
 }
