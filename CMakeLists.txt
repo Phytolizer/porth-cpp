@@ -22,6 +22,13 @@ add_library(span INTERFACE)
 target_include_directories(span INTERFACE "modules/span/include")
 target_link_libraries(span INTERFACE gsl)
 
+add_library(range_v3 INTERFACE)
+target_include_directories(range_v3 INTERFACE "modules/range_v3/include")
+
+add_library(ranges INTERFACE)
+target_include_directories(ranges INTERFACE "modules/ranges/include")
+target_link_libraries(ranges INTERFACE range_v3)
+
 add_library(iota "modules/iota/source/iota.cpp")
 target_include_directories(iota PUBLIC "modules/iota/include")
 
@@ -50,7 +57,7 @@ add_executable(
     "modules/porth/source/op.cpp"
     "${PROJECT_BINARY_DIR}/include/iota_generated/op_id.hpp"
 )
-target_link_libraries(porth_cpp PRIVATE subprocess_h span)
+target_link_libraries(porth_cpp PRIVATE subprocess_h span ranges)
 target_include_directories(
     porth_cpp PRIVATE "modules/porth/include" "${PROJECT_BINARY_DIR}/include"
 )

@@ -2,7 +2,7 @@
 
 #include "porth/op.hpp"
 
-#include <algorithm>
+#include <ranges/ranges.hpp>
 #include <fstream>
 #include <sstream>
 #include <stack>
@@ -46,7 +46,7 @@ std::vector<porth::Token> porth::lexFile(const std::string& filePath) {
     std::string line;
     size_t lineNumber = 0;
     while (std::getline(source, line)) {
-        std::ranges::copy(lexLine(filePath, lineNumber, line), std::back_inserter(result));
+        my_ranges::copy(lexLine(filePath, lineNumber, line), std::back_inserter(result));
         ++lineNumber;
     }
     return result;
