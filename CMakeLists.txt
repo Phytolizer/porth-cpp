@@ -62,3 +62,12 @@ add_executable(
 add_dependencies(porth_test porth_cpp)
 target_link_libraries(porth_test PRIVATE subprocess_h)
 target_include_directories(porth_test PRIVATE "${PROJECT_BINARY_DIR}/include")
+
+if(PROJECT_IS_TOP_LEVEL)
+    enable_testing()
+    add_test(
+        NAME porth_test
+        COMMAND "$<TARGET_FILE:porth_test>"
+        WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+    )
+endif()
