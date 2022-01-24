@@ -22,8 +22,8 @@ target_include_directories(iota PUBLIC "modules/iota/include")
 add_executable(iota_driver "modules/iota_driver/source/main.cpp")
 target_link_libraries(iota_driver PRIVATE iota)
 
-add_custom_target(
-    generate_iotas
+add_custom_command(
+    OUTPUT "${PROJECT_BINARY_DIR}/include/iota_generated/op_id.hpp"
     DEPENDS "${PROJECT_SOURCE_DIR}/modules/porth/iota/op_id.iota"
     COMMAND "${CMAKE_COMMAND}" -E make_directory
             "${PROJECT_BINARY_DIR}/include/iota_generated"
@@ -39,11 +39,12 @@ target_include_directories(
 )
 
 add_executable(
-    porth_cpp "modules/porth/source/main.cpp" "modules/porth/source/lexer.cpp"
-              "modules/porth/source/op.cpp"
+    porth_cpp
+    "modules/porth/source/main.cpp" "modules/porth/source/lexer.cpp"
+    "modules/porth/source/op.cpp"
+    "${PROJECT_BINARY_DIR}/include/iota_generated/op_id.hpp"
 )
 target_link_libraries(porth_cpp PRIVATE subprocess_h)
-add_dependencies(porth_cpp generate_iotas)
 target_include_directories(
     porth_cpp PRIVATE "modules/porth/include" "${PROJECT_BINARY_DIR}/include"
 )

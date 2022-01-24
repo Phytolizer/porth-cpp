@@ -25,5 +25,6 @@ Op dump();
 Op dup();
 Op wile();
 Op doo();
+Op mem();
 
 } // namespace porth

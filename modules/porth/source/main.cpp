@@ -16,6 +16,13 @@
 
 using namespace std::string_view_literals;
 
+constexpr size_t MEM_CAPACITY = 640'000;
+#ifdef _WIN32
+#define EXE_SUFFIX ".exe"
+#else
+#define EXE_SUFFIX ""
+#endif
+
 template <typename T> T vecPop(std::vector<T>& v) {
     T result = std::move(v.back());
     v.pop_back();
@@ -23,8 +30,9 @@ template <typename T> T vecPop(std::vector<T>& v) {
 }
 
 void simulateProgram(const std::vector<porth::Op>& program) {
-    static_assert(porth::OpIds::Count.discriminant == 12, "Exhaustive handling of OpIds in simulateProgram");
+    static_assert(porth::OpIds::Count.discriminant == 13, "Exhaustive handling of OpIds in simulateProgram");
     std::vector<std::int64_t> stack;
+    std::array<std::uint8_t, MEM_CAPACITY> mem;
     // execution is not linear, so we use a for loop with an index
     for (size_t ip = 0; ip < program.size();) {
         if (const porth::Op& op = program[ip]; op.id == porth::OpIds::Push) {
@@ -75,6 +83,9 @@ void simulateProgram(const std::vector<porth::Op>& program) {
             } else {
                 ++ip;
             }
+        } else if (op.id == porth::OpIds::Mem) {
+            stack.push_back((std::int64_t)(mem.data()));
+            ++ip;
         }
     }
 }
@@ -99,63 +110,66 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
         return 1;
     }
     size_t indent = 0;
-    emit(output, indent) << "#include <iostream>\n";
-    emit(output, indent) << "#include <stack>\n";
+    output << "#include <array>\n";
+    output << "#include <cstdint>\n";
+    output << "#include <iostream>\n";
+    output << "#include <stack>\n";
     emit(output, indent) << "int main() {\n";
     ++indent;
-    emit(output, indent) << "std::stack<int> s;\n";
-    static_assert(porth::OpIds::Count.discriminant == 12, "Exhaustive handling of OpIds in compileProgram");
+    emit(output, indent) << "std::array<std::uint8_t, " << MEM_CAPACITY << "> mem;\n";
+    emit(output, indent) << "std::stack<int> _porth_stack;\n";
+    static_assert(porth::OpIds::Count.discriminant == 13, "Exhaustive handling of OpIds in compileProgram");
     for (size_t ip = 0; ip < program.size(); ++ip) {
         const porth::Op& op = program[ip];
         emit(output, indent) << "// -- " << op.id.name << " --\n";
         output << labelName(ip) << ":\n";
         if (op.id == porth::OpIds::Push) {
-            emit(output, indent) << "s.push(" << op.operand << ");\n";
+            emit(output, indent) << "_porth_stack.push(" << op.operand << ");\n";
         } else if (op.id == porth::OpIds::Plus) {
             emit(output, indent) << "{\n";
             ++indent;
-            emit(output, indent) << "auto b = s.top();\n";
-            emit(output, indent) << "s.pop();\n";
-            emit(output, indent) << "auto a = s.top();\n";
-            emit(output, indent) << "s.pop();\n";
-            emit(output, indent) << "s.push(a + b);\n";
+            emit(output, indent) << "auto b = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "auto a = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "_porth_stack.push(a + b);\n";
             --indent;
             emit(output, indent) << "}\n";
         } else if (op.id == porth::OpIds::Minus) {
             emit(output, indent) << "{\n";
             ++indent;
-            emit(output, indent) << "auto b = s.top();\n";
-            emit(output, indent) << "s.pop();\n";
-            emit(output, indent) << "auto a = s.top();\n";
-            emit(output, indent) << "s.pop();\n";
-            emit(output, indent) << "s.push(a - b);\n";
+            emit(output, indent) << "auto b = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "auto a = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "_porth_stack.push(a - b);\n";
             --indent;
             emit(output, indent) << "}\n";
         } else if (op.id == porth::OpIds::Equal) {
             emit(output, indent) << "{\n";
             ++indent;
-            emit(output, indent) << "auto b = s.top();\n";
-            emit(output, indent) << "s.pop();\n";
-            emit(output, indent) << "auto a = s.top();\n";
-            emit(output, indent) << "s.pop();\n";
-            emit(output, indent) << "s.push(a == b ? 1 : 0);\n";
+            emit(output, indent) << "auto b = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "auto a = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "_porth_stack.push(a == b ? 1 : 0);\n";
             --indent;
             emit(output, indent) << "}\n";
         } else if (op.id == porth::OpIds::Gt) {
             emit(output, indent) << "{\n";
             ++indent;
-            emit(output, indent) << "auto b = s.top();\n";
-            emit(output, indent) << "s.pop();\n";
-            emit(output, indent) << "auto a = s.top();\n";
-            emit(output, indent) << "s.pop();\n";
-            emit(output, indent) << "s.push(a > b ? 1 : 0);\n";
+            emit(output, indent) << "auto b = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "auto a = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "_porth_stack.push(a > b ? 1 : 0);\n";
             --indent;
             emit(output, indent) << "}\n";
         } else if (op.id == porth::OpIds::If) {
             emit(output, indent) << "{\n";
             ++indent;
-            emit(output, indent) << "auto a = s.top();\n";
-            emit(output, indent) << "s.pop();\n";
+            emit(output, indent) << "auto a = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
             emit(output, indent) << "if (a == 0) {\n";
             ++indent;
             emit(output, indent) << "goto " << labelName(op.operand) << ";\n";
@@ -170,12 +184,12 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
                 emit(output, indent) << "goto " << labelName(op.operand) << ";\n";
             }
         } else if (op.id == porth::OpIds::Dump) {
-            emit(output, indent) << "std::cout << s.top() << \"\\n\";\n";
+            emit(output, indent) << "std::cout << _porth_stack.top() << \"\\n\";\n";
         } else if (op.id == porth::OpIds::Dup) {
             emit(output, indent) << "{\n";
             ++indent;
-            emit(output, indent) << "auto a = s.top();\n";
-            emit(output, indent) << "s.push(a);\n";
+            emit(output, indent) << "auto a = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.push(a);\n";
             --indent;
             emit(output, indent) << "}\n";
         } else if (op.id == porth::OpIds::While) {
@@ -183,8 +197,8 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
         } else if (op.id == porth::OpIds::Do) {
             emit(output, indent) << "{\n";
             ++indent;
-            emit(output, indent) << "auto a = s.top();\n";
-            emit(output, indent) << "s.pop();\n";
+            emit(output, indent) << "auto a = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
             emit(output, indent) << "if (a == 0) {\n";
             ++indent;
             emit(output, indent) << "goto " << labelName(op.operand) << ";\n";
@@ -192,6 +206,8 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
             emit(output, indent) << "}\n";
             --indent;
             emit(output, indent) << "}\n";
+        } else if (op.id == porth::OpIds::Mem) {
+            emit(output, indent) << "_porth_stack.push(reinterpret_cast<std::int64_t>(mem.data()));\n";
         }
     }
     output << labelName(static_cast<std::int64_t>(program.size())) << ":\n";
@@ -247,9 +263,15 @@ std::string replaceOrAppendExtension(
 }
 
 int tryBuild(const std::string& cppOutputFilePath, const std::string& outFilePath) {
+    constexpr const char* COMPILER = "clang++";
+
     const std::regex extensionPattern{"\\.cpp$"};
+
+#ifdef _WIN32
     const std::string objPath = replaceOrAppendExtension(cppOutputFilePath, extensionPattern, ".obj");
-    const std::string asmPath = replaceOrAppendExtension(cppOutputFilePath, extensionPattern, ".asm");
+#else
+    const std::string objPath = replaceOrAppendExtension(cppOutputFilePath, extensionPattern, ".o");
+#endif
 
 #ifdef _MSC_VER
     const std::string outArg = "-Fo" + objPath;
@@ -274,28 +296,9 @@ int tryBuild(const std::string& cppOutputFilePath, const std::string& outFilePat
         return ret;
     }
 #else
-    const char* asmArgs[] = {
-        "/usr/bin/env",
-        "g++",
-        "-w",
-        "-xc++",
-        "-std=c++20",
-        "-O2",
-        "-S",
-        "-flto",
-        "-march=native",
-        "-fverbose-asm",
-        cppOutputFilePath.c_str(),
-        "-o",
-        asmPath.c_str(),
-        nullptr,
-    };
-    if (const int ret = tryRunSubprocess(asmArgs); ret != 0) {
-        return ret;
-    }
     const char* objArgs[] = {
         "/usr/bin/env",
-        "g++",
+        COMPILER,
         "-w",
         "-xc++",
         "-std=c++20",
@@ -312,7 +315,7 @@ int tryBuild(const std::string& cppOutputFilePath, const std::string& outFilePat
     }
     const char* linkArgs[] = {
         "/usr/bin/env",
-        "g++",
+        COMPILER,
         "-w",
         "-flto",
         "-march=native",
@@ -357,7 +360,7 @@ UnconsArgs uncons(std::span<char*> args) {
 
 porth::Op parseTokenAsOp(const porth::Token& token) {
     const auto& [filePath, row, col, word] = token;
-    static_assert(porth::OpIds::Count.discriminant == 12, "Exhaustive handling of OpIds in parseTokenAsOp");
+    static_assert(porth::OpIds::Count.discriminant == 13, "Exhaustive handling of OpIds in parseTokenAsOp");
     if (word == "+") {
         return porth::plus();
     }
@@ -391,6 +394,9 @@ porth::Op parseTokenAsOp(const porth::Token& token) {
     if (word == "do") {
         return porth::doo();
     }
+    if (word == "mem") {
+        return porth::mem();
+    }
     int pushArg;
     if (std::istringstream wordStream{word}; !(wordStream >> pushArg)) {
         std::cerr << filePath << ":" << row << ":" << col << ": attempt to convert non-integer value\n";
@@ -407,7 +413,7 @@ template <typename T> T stackPop(std::stack<T>& stack) {
 
 std::vector<porth::Op> crossReferenceBlocks(std::vector<porth::Op>&& program) {
     std::stack<size_t> stack;
-    static_assert(porth::OpIds::Count.discriminant == 12, "Exhaustive handling of OpIds in crossReferenceBlocks");
+    static_assert(porth::OpIds::Count.discriminant == 13, "Exhaustive handling of OpIds in crossReferenceBlocks");
     for (size_t ip = 0; ip < program.size(); ++ip) {
         if (const porth::Op& op = program[ip]; op.id == porth::OpIds::If) {
             stack.push(ip);
@@ -474,7 +480,7 @@ int main(const int argc, char** argv) {
         const char* inputFilePathOrFlag = args[cursor++];
         bool runExecutable = false;
         std::string inputFilePath;
-        std::string outputFilePath = std::string{PROJECT_BINARY_DIR} + "/output.exe";
+        std::string outputFilePath = std::string{PROJECT_BINARY_DIR} + "/output" EXE_SUFFIX;
         if (inputFilePathOrFlag[0] == '-') {
             while (inputFilePathOrFlag[0] == '-') {
                 const char* const flag = inputFilePathOrFlag + 1;

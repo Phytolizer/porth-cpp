@@ -55,3 +55,7 @@ porth::Op porth::wile() {
 porth::Op porth::doo() {
     return Op{OpIds::Do};
 }
+
+porth::Op porth::mem() {
+    return Op{OpIds::Mem};
+}
