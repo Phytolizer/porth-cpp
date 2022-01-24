@@ -351,17 +351,6 @@ void usage(const char* thisProgram) {
     std::cerr << "    com <file>   Compile the program\n";
 }
 
-struct UnconsArgs {
-    char* first;
-    span::Span<char*> rest;
-    constexpr UnconsArgs(char* first, const span::Span<char*> rest) : first(first), rest(rest) {
-    }
-};
-
-UnconsArgs uncons(span::Span<char*> args) {
-    return {args[0], args.subspan(1)};
-}
-
 porth::Op parseTokenAsOp(const porth::Token& token) {
     const auto& [filePath, row, col, word] = token;
     static_assert(porth::OpIds::Count.discriminant == 13, "Exhaustive handling of OpIds in parseTokenAsOp");
