@@ -4,13 +4,9 @@
 #include <algorithm>
 #include <ranges>
 
-namespace my_ranges {
-using namespace std::ranges;
-} // namespace my_ranges
+namespace my_ranges = std::ranges;
 #else
 #include <range/v3/algorithm/copy.hpp>
 
-namespace my_ranges {
-using namespace ranges;
-} // namespace my_ranges
+namespace my_ranges = ranges;
 #endif
