@@ -7,4 +7,5 @@ porth::OpId = iota {
 	Else,
 	End,
 	Dump,
+    Dup,
 };

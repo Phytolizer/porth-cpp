@@ -37,3 +37,7 @@ porth::Op porth::end() {
 porth::Op porth::dump() {
     return Op{OpIds::Dump};
 }
+
+porth::Op porth::dup() {
+    return Op{OpIds::Dup};
+}

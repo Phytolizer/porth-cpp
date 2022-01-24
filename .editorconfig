@@ -1,5 +1,6 @@
 # Rules in this file were initially inferred by Visual Studio IntelliCode from the C:\Users\kyle\Documents\Git\porth-cpp codebase based on best match to current usage at 1/24/2022
 # You can modify the rules from these initially generated values to suit your own policies
 # You can learn more about editorconfig here: https://docs.microsoft.com/en-us/visualstudio/ide/editorconfig-code-style-settings-reference
-[*.cs]
-
+[*]
+indent_style = space
+indent_size = 4
