@@ -1,17 +1,15 @@
 #include "porth/com.hpp"
 #include "porth/lexer.hpp"
-#include "porth/mem.hpp"
 #include "porth/op.hpp"
 #include "porth/parse_error.hpp"
 #include "porth/semantic_error.hpp"
 #include "porth/sim.hpp"
 #include "porth/simulation_error.hpp"
 
-#include <cassert>
 #include <config.hpp>
-#include <fstream>
 #include <iostream>
 #include <iota_generated/op_id.hpp>
+#include <ranges/ranges.hpp>
 #include <regex>
 #include <span/span.hpp>
 #include <sstream>
@@ -38,8 +36,7 @@ void printArgs(const char* const* args) {
 
 int tryRunSubprocess(const std::vector<std::string>& args) {
     std::vector<const char*> realArgs;
-    std::transform(
-        args.begin(), args.end(), std::back_inserter(realArgs), [](const std::string& s) { return s.c_str(); });
+    my_ranges::transform(args, std::back_inserter(realArgs), [](const std::string& s) { return s.c_str(); });
     realArgs.push_back(nullptr);
 
     printArgs(realArgs.data());
@@ -80,8 +77,6 @@ std::string replaceOrAppendExtension(
 }
 
 int tryBuild(const std::string& cppOutputFilePath, const std::string& outFilePath) {
-    constexpr auto COMPILER = "clang++";
-
     const std::regex extensionPattern{"\\.cpp$"};
 
 #ifdef _WIN32
@@ -111,6 +106,8 @@ int tryBuild(const std::string& cppOutputFilePath, const std::string& outFilePat
         return ret;
     }
 #else
+    constexpr auto COMPILER = "clang++";
+
     if (const int ret = tryRunSubprocess({
             "/usr/bin/env",
             COMPILER,
@@ -149,7 +146,7 @@ int tryBuild(const std::string& cppOutputFilePath, const std::string& outFilePat
 int tryRunExecutable(const std::string& outFilePath, const span::Span<char*> args) {
     std::vector<std::string> combinedArgs;
     combinedArgs.emplace_back(outFilePath);
-    std::transform(args.begin(), args.end(), std::back_inserter(combinedArgs), [](char* c) { return std::string{c}; });
+    my_ranges::transform(args, std::back_inserter(combinedArgs), [](const char* c) { return std::string{c}; });
     return tryRunSubprocess(combinedArgs);
 }
 
@@ -363,7 +360,7 @@ int main(const int argc, char** argv) {
         }
 
         try {
-            porth::simulateProgram(program, debugMode);
+            simulateProgram(program, debugMode);
         } catch (porth::SimulationError& e) {
             std::cerr << "[ERROR] " << e.what() << "\n";
             return 1;
@@ -376,12 +373,10 @@ int main(const int argc, char** argv) {
         }
         const char* inputFilePathOrFlag = args[cursor++];
         bool runExecutable = false;
-        std::string inputFilePath;
         std::string outputFilePath = std::string{PROJECT_BINARY_DIR} + "/output" EXE_SUFFIX;
         if (inputFilePathOrFlag[0] == '-') {
             while (inputFilePathOrFlag[0] == '-') {
-                const char* const flag = inputFilePathOrFlag + 1;
-                if (flag == "r"sv) {
+                if (const char* const flag = inputFilePathOrFlag + 1; flag == "r"sv) {
                     runExecutable = true;
                 } else if (flag == "o"sv) {
                     if (args.size() == cursor) {
@@ -400,7 +395,7 @@ int main(const int argc, char** argv) {
                 inputFilePathOrFlag = args[cursor++];
             }
         }
-        inputFilePath = inputFilePathOrFlag;
+        const std::string inputFilePath = inputFilePathOrFlag;
         std::vector<porth::Op> program;
         try {
             program = loadProgramFromFile(inputFilePath);
@@ -413,7 +408,7 @@ int main(const int argc, char** argv) {
         }
 
         const std::string cppOutputFilePath = std::string{PROJECT_BINARY_DIR} + "/output.cpp";
-        if (const int ret = porth::compileProgram(program, cppOutputFilePath); ret != 0) {
+        if (const int ret = compileProgram(program, cppOutputFilePath); ret != 0) {
             return ret;
         }
         if (const int ret = tryBuild(cppOutputFilePath, outputFilePath); ret != 0) {

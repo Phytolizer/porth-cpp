@@ -3,7 +3,7 @@
 #include <stdexcept>
 namespace porth {
 
-struct ParseError : std::runtime_error {
+struct ParseError final : std::runtime_error {
     explicit ParseError(const std::string& what);
 };
 

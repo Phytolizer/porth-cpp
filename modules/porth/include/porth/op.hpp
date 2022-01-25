@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <iota_generated/op_id.hpp>
+#include <ostream>
 
 namespace porth {
 
@@ -49,3 +50,5 @@ Op over();
 Op mod();
 
 } // namespace porth
+
+std::ostream& operator<<(std::ostream& os, const porth::Op& op);

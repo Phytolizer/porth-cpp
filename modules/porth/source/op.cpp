@@ -8,6 +8,10 @@ porth::Op::Op(const OpId id) : id(id), operand(0) {
 porth::Op::Op(const OpId id, const std::int64_t operand) : id(id), operand(operand) {
 }
 
+std::ostream& operator<<(std::ostream& os, const porth::Op& op) {
+    return os << op.id.name;
+}
+
 porth::Op porth::push(const std::int64_t x) {
     return Op{OpIds::Push, x};
 }

@@ -7,6 +7,6 @@
 
 namespace porth {
 
-int compileProgram(const std::vector<porth::Op>& program, const std::string& outFilePath);
+int compileProgram(const std::vector<Op>& program, const std::string& outFilePath);
 
 }

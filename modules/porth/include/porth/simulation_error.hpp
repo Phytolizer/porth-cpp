@@ -3,7 +3,7 @@
 #include <stdexcept>
 namespace porth {
 
-struct SimulationError : std::runtime_error {
+struct SimulationError final : std::runtime_error {
     explicit SimulationError(const std::string& what);
 };
 

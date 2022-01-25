@@ -4,7 +4,7 @@
 
 namespace porth {
 
-struct SemanticError : std::runtime_error {
+struct SemanticError final : std::runtime_error {
     explicit SemanticError(const std::string& what);
 };
 
