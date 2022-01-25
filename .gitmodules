@@ -1,3 +1,6 @@
 [submodule "modules/subprocess_h"]
 	path = modules/subprocess_h
 	url = git://github.com/sheredom/subprocess.h.git
+[submodule "modules/gsl"]
+	path = modules/gsl
+	url = git://github.com/microsoft/GSL.git
