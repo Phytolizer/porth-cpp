@@ -14,7 +14,7 @@
 #include <vector>
 
 struct SubprocessError : std::runtime_error {
-    SubprocessError(const std::string& message) : std::runtime_error{message} {
+    explicit SubprocessError(const std::string& message) : std::runtime_error{message} {
     }
 };
 
@@ -28,7 +28,7 @@ std::string runSubprocess(const std::vector<std::string>& args) {
     }
     std::cout << "\n";
 
-    subprocess_s sub;
+    subprocess_s sub{};
     std::vector<const char*> cArgs;
     std::transform(
         args.begin(), args.end(), std::back_inserter(cArgs), [](const std::string& arg) { return arg.c_str(); });
@@ -46,7 +46,7 @@ std::string runSubprocess(const std::vector<std::string>& args) {
 
     char buffer[1024];
     std::string result;
-    int nread;
+    unsigned int nread;
     while ((nread = subprocess_read_stdout(&sub, buffer, sizeof buffer)) > 0) {
         result.append(buffer, nread);
     }

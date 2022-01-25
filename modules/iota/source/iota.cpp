@@ -4,8 +4,7 @@
 #include <sstream>
 #include <vector>
 
-enum struct TokenKind
-{
+enum struct TokenKind {
     SomethingElse,
     Identifier,
     EqualsSign,
@@ -266,8 +265,13 @@ void emitCode(std::ostream& output, const Iota& i) {
     }
 }
 
-void iota::generate(const std::istream& input, std::ostream& output) {
+int iota::generate(const std::istream& input, std::ostream& output) {
     const std::vector<Token> tokens = lex(input);
     const Iota i = parse(tokens);
-    emitCode(output, i);
+    if (i.parseSuccess) {
+        emitCode(output, i);
+        return 0;
+    }
+    std::cerr << "iota: could not parse\n";
+    return 1;
 }

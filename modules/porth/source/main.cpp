@@ -37,7 +37,7 @@ template <typename T> T vecPop(std::vector<T>& v) {
 void simulateProgram(const std::vector<porth::Op>& program) {
     static_assert(porth::OpIds::Count.discriminant == 25, "Exhaustive handling of OpIds in simulateProgram");
     std::vector<std::int64_t> stack;
-    std::array<std::uint8_t, MEM_CAPACITY> mem;
+    std::array<std::uint8_t, MEM_CAPACITY> mem{};
     // execution is not linear, so we use a for loop with an index
     for (size_t ip = 0; ip < program.size();) {
         if (const porth::Op& op = program[ip]; op.id == porth::OpIds::Push) {
@@ -119,7 +119,7 @@ void simulateProgram(const std::vector<porth::Op>& program) {
             const std::int64_t a = vecPop(stack);
             // Interpret a as a memory address.
             // Here be dragons.
-            const std::uintptr_t addr = static_cast<std::size_t>(a);
+            const auto addr = static_cast<std::size_t>(a);
             if (addr >= mem.size()) {
                 std::ostringstream errorMessage;
                 errorMessage << "load: invalid memory address " << addr;
@@ -133,7 +133,7 @@ void simulateProgram(const std::vector<porth::Op>& program) {
             const std::int64_t a = vecPop(stack);
             // Interpret a as a memory address.
             // Here be dragons.
-            const std::uintptr_t addr = static_cast<std::size_t>(a);
+            const auto addr = static_cast<std::size_t>(a);
             if (addr >= mem.size()) {
                 std::ostringstream errorMessage;
                 errorMessage << "store: invalid memory address " << addr;
@@ -215,7 +215,7 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
     for (size_t ip = 0; ip < program.size(); ++ip) {
         const porth::Op& op = program[ip];
         emit(output, indent) << "// -- " << op.id.name << " --\n";
-        output << labelName(ip) << ":\n";
+        output << labelName(static_cast<std::int64_t>(ip)) << ":\n";
         if (op.id == porth::OpIds::Push) {
             emit(output, indent) << "_porth_stack.push(" << op.operand << ");\n";
         } else if (op.id == porth::OpIds::Plus) {
@@ -448,9 +448,9 @@ int tryRunSubprocess(const char* const* args) {
     }
     subprocess::DestroyGuard dg{&sub};
     char buffer[1024] = {};
-    size_t nread = 0;
+    size_t nread;
     while ((nread = subprocess_read_stdout(&sub, buffer, sizeof buffer)) > 0) {
-        std::cerr.write(buffer, nread);
+        std::cerr.write(buffer, static_cast<std::streamsize>(nread));
     }
     int code = 0;
     if (const int ret = subprocess_join(&sub, &code); ret != 0) {
@@ -552,10 +552,12 @@ int tryRunExecutable(const std::string& outFilePath) {
 }
 
 void usage(const char* thisProgram) {
-    std::cerr << "Usage: " << thisProgram << " <SUBCOMMAND> [ARGS]\n";
-    std::cerr << "SUBCOMMANDS:\n";
-    std::cerr << "    sim <file>   Simulate the program\n";
-    std::cerr << "    com <file>   Compile the program\n";
+    std::cerr << "Usage: " << thisProgram << " [OPTIONS] <SUBCOMMAND> [ARGS]\n";
+    std::cerr << "  OPTIONS:\n";
+    std::cerr << "    -debug                 Enable debug mode\n";
+    std::cerr << "  SUBCOMMANDS:\n";
+    std::cerr << "    sim <file>             Simulate the program\n";
+    std::cerr << "    com [OPTIONS] <file>   Compile the program\n";
 }
 
 porth::Op parseTokenAsOp(const porth::Token& token) {
@@ -661,7 +663,7 @@ std::vector<porth::Op> crossReferenceBlocks(std::vector<porth::Op>&& program) {
             if (const size_t blockIp = stackPop(stack);
                 program[blockIp].id == porth::OpIds::If || program[blockIp].id == porth::OpIds::Else) {
                 program[blockIp].operand = static_cast<std::int64_t>(ip);
-                program[ip].operand = ip + 1;
+                program[ip].operand = static_cast<std::int64_t>(ip) + 1;
             } else if (program[blockIp].id == porth::OpIds::Do) {
                 program[ip].operand = program[blockIp].operand;
                 program[blockIp].operand = static_cast<std::int64_t>(ip) + 1;

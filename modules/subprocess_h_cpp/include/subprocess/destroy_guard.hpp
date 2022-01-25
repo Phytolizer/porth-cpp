@@ -13,11 +13,11 @@ struct DestroyGuard {
         }
     }
     DestroyGuard(const DestroyGuard&) = delete;
-    DestroyGuard(DestroyGuard&& other) : pProcess(other.pProcess) {
+    DestroyGuard(DestroyGuard&& other) noexcept : pProcess(other.pProcess) {
         other.pProcess = nullptr;
     }
     DestroyGuard& operator=(const DestroyGuard&) = delete;
-    DestroyGuard& operator=(DestroyGuard&& other) {
+    DestroyGuard& operator=(DestroyGuard&& other) noexcept {
         if (&other != this) {
             pProcess = other.pProcess;
             other.pProcess = nullptr;

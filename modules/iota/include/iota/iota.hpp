@@ -5,6 +5,6 @@
 
 namespace iota {
 
-void generate(const std::istream& input, std::ostream& output);
+int generate(const std::istream& input, std::ostream& output);
 
 }

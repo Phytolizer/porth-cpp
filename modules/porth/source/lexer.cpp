@@ -1,7 +1,5 @@
 #include "porth/lexer.hpp"
 
-#include "porth/op.hpp"
-
 #include <ranges/ranges.hpp>
 #include <fstream>
 #include <sstream>
@@ -25,13 +23,6 @@ std::vector<porth::Token> lexLine(const std::string& filePath, const size_t line
     }
     return result;
 }
-
-struct LexedLine {
-    size_t lineNumber;
-    std::vector<porth::Token> line;
-    LexedLine(const size_t lineNumber, std::vector<porth::Token> line) : lineNumber(lineNumber), line(std::move(line)) {
-    }
-};
 
 std::vector<porth::Token> porth::lexFile(const std::string& filePath) {
     std::vector<Token> result;

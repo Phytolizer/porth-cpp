@@ -19,5 +19,5 @@ int main(const int argc, char** argv) {
         std::cerr << "ERROR: Could not open " << args[2] << " for writing.\n";
         return 3;
     }
-    iota::generate(inStream, outStream);
+    return iota::generate(inStream, outStream);
 }
