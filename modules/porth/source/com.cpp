@@ -139,7 +139,7 @@ int porth::compileProgram(const std::vector<Op>& program, const std::string& out
             if (op.operand != static_cast<std::int64_t>(ip) + 1) {
                 emit(output, indent) << "goto " << labelName(op.operand) << ";\n";
             }
-        } else if (op.id == OpIds::Dump) {
+        } else if (op.id == OpIds::Print) {
             emit(output, indent) << "std::cout << _porth_stack.top() << \"\\n\";\n";
         } else if (op.id == OpIds::Dup) {
             emit(output, indent) << "{\n";

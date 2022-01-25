@@ -26,7 +26,7 @@ Op le();
 Op iff();
 Op elze();
 Op end();
-Op dump();
+Op print();
 Op dup();
 Op dup2();
 Op swap();

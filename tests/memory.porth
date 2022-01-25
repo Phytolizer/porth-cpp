@@ -2,7 +2,7 @@
 // The below does not work because memory addresses are not consistent between
 // simulation and compilation.
 
-// mem dump
+// mem print
 mem 0 + 97 .
 mem 1 + 98 .
 mem 2 + 99 .

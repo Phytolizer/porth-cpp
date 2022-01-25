@@ -11,7 +11,7 @@ porth::OpId = iota {
     If,
     Else,
     End,
-    Dump,
+    Print,
     Dup,
     Dup2,
     Swap,

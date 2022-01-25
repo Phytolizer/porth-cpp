@@ -75,7 +75,7 @@ void porth::simulateProgram(const std::vector<Op>& program, bool debugMode) {
             ip = static_cast<size_t>(op.operand);
         } else if (op.id == OpIds::End) {
             ip = static_cast<size_t>(op.operand);
-        } else if (op.id == OpIds::Dump) {
+        } else if (op.id == OpIds::Print) {
             std::cout << stack.back() << "\n";
             ++ip;
         } else if (op.id == OpIds::Dup) {

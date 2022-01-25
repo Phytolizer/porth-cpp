@@ -56,8 +56,8 @@ porth::Op porth::end() {
     return Op{OpIds::End};
 }
 
-porth::Op porth::dump() {
-    return Op{OpIds::Dump};
+porth::Op porth::print() {
+    return Op{OpIds::Print};
 }
 
 porth::Op porth::dup() {

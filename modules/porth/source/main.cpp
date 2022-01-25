@@ -186,8 +186,8 @@ porth::Op parseTokenAsOp(const porth::Token& token) {
     if (word == "<=") {
         return porth::le();
     }
-    if (word == "dump") {
-        return porth::dump();
+    if (word == "print") {
+        return porth::print();
     }
     if (word == "if") {
         return porth::iff();
