@@ -66,11 +66,11 @@ std::string runSubprocess(const std::vector<std::string>& args) {
     return result;
 }
 
-int test() {
+int test(const std::filesystem::path& folder) {
     std::size_t simFailed = 0;
     std::size_t comFailed = 0;
 
-    const std::filesystem::recursive_directory_iterator tests{std::filesystem::current_path() / "tests"};
+    const std::filesystem::recursive_directory_iterator tests{folder};
     for (const auto& entry : tests) {
         if (entry.is_directory()) {
             continue;
@@ -152,8 +152,8 @@ int test() {
     return 0;
 }
 
-void record() {
-    const std::filesystem::recursive_directory_iterator tests{std::filesystem::current_path() / "tests"};
+void record(const std::filesystem::path& folder) {
+    const std::filesystem::recursive_directory_iterator tests{folder};
     for (const auto& entry : tests) {
         if (entry.is_directory()) {
             continue;
@@ -183,28 +183,42 @@ void record() {
 }
 
 void usage(const std::string& exeName) {
-    std::cout << "Usage: " << exeName << " [SUBCOMMAND]\n";
-    std::cout << "  test      Run the tests. (Default when no subcommand is provided)\n";
-    std::cout << "  record    Record expected output for the tests.\n";
-    std::cout << "  help      Print this message to stdout.\n";
+    std::cout << "Usage: " << exeName << " [OPTIONS] [SUBCOMMAND]\n";
+    std::cout << "  OPTIONS:\n";
+    std::cout << "    -f <folder>  Folder with the tests. (Default: ./tests/)\n";
+    std::cout << "  SUBCOMMANDS:\n";
+    std::cout << "    test         Run the tests. (Default when no subcommand is provided)\n";
+    std::cout << "    record       Record expected output for the tests.\n";
+    std::cout << "    help         Print this message to stdout.\n";
 }
 
 int main(int argc, char** argv) {
     span::Span<char*> args{argv, static_cast<std::size_t>(argc)};
     std::size_t cursor = 0;
     const std::string exeName = args[cursor++];
+    std::filesystem::path folder = std::filesystem::current_path() / "tests";
+    std::string subcmd = "test";
 
-    if (args.size() == cursor) {
-        return test();
+    while (args.size() > cursor) {
+        const std::string arg = args[cursor++];
+        if (arg == "-f") {
+            if (args.size() == cursor) {
+                std::cout << "[ERROR] no <folder> is provided for option '-f'\n";
+                return 1;
+            }
+            folder = args[cursor++];
+        } else {
+            subcmd = arg;
+            break;
+        }
     }
 
-    const std::string subcmd = args[cursor++];
     if (subcmd == "record") {
-        record();
+        record(folder);
         return 0;
     }
     if (subcmd == "test") {
-        return test();
+        return test(folder);
     }
     if (subcmd == "help") {
         usage(exeName);
