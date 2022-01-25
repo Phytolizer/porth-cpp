@@ -3,6 +3,7 @@ porth::OpId = iota {
     Plus,
     Minus,
     Eq,
+    Ne,
     Gt,
     Lt,
     Ge,

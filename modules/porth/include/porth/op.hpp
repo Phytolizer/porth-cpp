@@ -17,6 +17,7 @@ Op push(int x);
 Op plus();
 Op minus();
 Op eq();
+Op ne();
 Op gt();
 Op lt();
 Op ge();

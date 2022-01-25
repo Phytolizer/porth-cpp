@@ -133,3 +133,6 @@ porth::Op porth::over() {
 porth::Op porth::mod() {
     return Op{OpIds::Mod};
 }
+porth::Op porth::ne() {
+    return Op{OpIds::Ne};
+}
