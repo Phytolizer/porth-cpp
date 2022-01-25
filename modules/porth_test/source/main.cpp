@@ -67,6 +67,9 @@ std::string runSubprocess(const std::vector<std::string>& args) {
 }
 
 int test() {
+    std::size_t simFailed = 0;
+    std::size_t comFailed = 0;
+
     const std::filesystem::recursive_directory_iterator tests{std::filesystem::current_path() / "tests"};
     for (const auto& entry : tests) {
         if (entry.is_directory()) {
@@ -98,12 +101,12 @@ int test() {
                 while (std::getline(expectedStream, line)) {
                     std::cerr << "    " << line << "\n";
                 }
-                std::cerr << "  Simulation output:\n";
+                std::cerr << "  Actual:\n";
                 std::istringstream simStream{simOutput};
                 while (std::getline(simStream, line)) {
                     std::cerr << "    " << line << "\n";
                 }
-                return 1;
+                ++simFailed;
             }
 
             std::filesystem::path exePath = entry.path();
@@ -128,19 +131,23 @@ int test() {
                 while (std::getline(expectedStream, line)) {
                     std::cerr << "    " << line << "\n";
                 }
-                std::cerr << "  Compilation output:\n";
+                std::cerr << "  Actual:\n";
                 std::istringstream comStream{comOutput};
                 while (std::getline(comStream, line)) {
                     std::cerr << "    " << line << "\n";
                 }
-                return 1;
+                ++comFailed;
             }
-
-            std::cout << "[INFO] " << entry.path().filename().string() << " OK\n";
         } catch (const SubprocessError& e) {
             std::cout << "[ERROR] " << e.what() << "\n";
             return 1;
         }
+    }
+
+    std::cout << "\n";
+    std::cout << "Simulation failed: " << simFailed << ", Compilation failed: " << comFailed << "\n";
+    if (simFailed > 0 || comFailed > 0) {
+        return 1;
     }
     return 0;
 }
