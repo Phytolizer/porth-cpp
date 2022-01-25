@@ -132,7 +132,7 @@ void simulateProgram(const std::vector<porth::Op>& program) {
                 const std::int64_t count = arg3;
                 const std::string_view s = {
                     reinterpret_cast<const char*>(&mem[buf]),
-                    reinterpret_cast<const char*>(&mem[buf + count]),
+                    static_cast<std::size_t>(count),
                 };
                 if (fd == 1) {
                     std::cout << s;
@@ -314,7 +314,7 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
             emit(output, indent) << "const std::string_view s = {\n";
             ++indent;
             emit(output, indent) << "reinterpret_cast<const char*>(&mem[buf]),\n";
-            emit(output, indent) << "reinterpret_cast<const char*>(&mem[buf + count]),\n";
+            emit(output, indent) << "static_cast<std::size_t>(count),\n";
             --indent;
             emit(output, indent) << "};\n";
             emit(output, indent) << "if (fd == 1) {\n";
