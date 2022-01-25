@@ -12,4 +12,6 @@ porth::OpId = iota {
     While,
     Do,
     Mem,
+    Load,
+    Store,
 };

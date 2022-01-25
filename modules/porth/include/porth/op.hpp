@@ -26,5 +26,7 @@ Op dup();
 Op wile();
 Op doo();
 Op mem();
+Op load();
+Op store();
 
 } // namespace porth

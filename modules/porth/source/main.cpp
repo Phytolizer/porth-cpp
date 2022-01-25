@@ -1,5 +1,8 @@
 #include "porth/lexer.hpp"
 #include "porth/op.hpp"
+#include "porth/parse_error.hpp"
+#include "porth/semantic_error.hpp"
+#include "porth/simulation_error.hpp"
 
 #include <cassert>
 #include <config.hpp>
@@ -32,7 +35,7 @@ template <typename T> T vecPop(std::vector<T>& v) {
 }
 
 void simulateProgram(const std::vector<porth::Op>& program) {
-    static_assert(porth::OpIds::Count.discriminant == 13, "Exhaustive handling of OpIds in simulateProgram");
+    static_assert(porth::OpIds::Count.discriminant == 15, "Exhaustive handling of OpIds in simulateProgram");
     std::vector<std::int64_t> stack;
     std::array<std::uint8_t, MEM_CAPACITY> mem;
     // execution is not linear, so we use a for loop with an index
@@ -90,6 +93,31 @@ void simulateProgram(const std::vector<porth::Op>& program) {
         } else if (op.id == porth::OpIds::Mem) {
             stack.push_back((std::int64_t)(mem.data()));
             ++ip;
+        } else if (op.id == porth::OpIds::Load) {
+            const std::int64_t a = vecPop(stack);
+            // Interpret a as a memory address.
+            // Here be dragons.
+            const std::uintptr_t addr = static_cast<std::uintptr_t>(a);
+            const std::uintptr_t memAddr = reinterpret_cast<std::uintptr_t>(mem.data());
+            if (addr < memAddr || addr >= memAddr + mem.size()) {
+                std::ostringstream errorMessage;
+                errorMessage << "load: invalid memory address " << addr;
+                throw porth::SimulationError(errorMessage.str());
+            }
+            const std::uint8_t b = *reinterpret_cast<const std::uint8_t*>(addr);
+            stack.push_back(static_cast<std::int64_t>(b));
+        } else if (op.id == porth::OpIds::Store) {
+            const std::int64_t a = vecPop(stack);
+            // Interpret a as a memory address.
+            // Here be dragons.
+            const std::uintptr_t addr = static_cast<std::uintptr_t>(a);
+            const std::uintptr_t memAddr = reinterpret_cast<std::uintptr_t>(mem.data());
+            if (addr < memAddr || addr >= memAddr + mem.size()) {
+                std::ostringstream errorMessage;
+                errorMessage << "store: invalid memory address " << addr;
+                throw porth::SimulationError(errorMessage.str());
+            }
+            *reinterpret_cast<std::uint8_t*>(addr) = static_cast<std::uint8_t>(stack.back());
         }
     }
 }
@@ -122,7 +150,7 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
     ++indent;
     emit(output, indent) << "std::array<std::uint8_t, " << MEM_CAPACITY << "> mem;\n";
     emit(output, indent) << "std::stack<int> _porth_stack;\n";
-    static_assert(porth::OpIds::Count.discriminant == 13, "Exhaustive handling of OpIds in compileProgram");
+    static_assert(porth::OpIds::Count.discriminant == 15, "Exhaustive handling of OpIds in compileProgram");
     for (size_t ip = 0; ip < program.size(); ++ip) {
         const porth::Op& op = program[ip];
         emit(output, indent) << "// -- " << op.id.name << " --\n";
@@ -212,6 +240,28 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
             emit(output, indent) << "}\n";
         } else if (op.id == porth::OpIds::Mem) {
             emit(output, indent) << "_porth_stack.push(reinterpret_cast<std::int64_t>(mem.data()));\n";
+        } else if (op.id == porth::OpIds::Load) {
+            emit(output, indent) << "{\n";
+            ++indent;
+            emit(output, indent) << "auto a = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "auto addr = static_cast<std::uintptr_t>(a);\n";
+            emit(output, indent) << "auto b = *reinterpret_cast<const std::uint8_t*>(addr);\n";
+            emit(output, indent) << "_porth_stack.push(static_cast<std::int64_t>(b));\n";
+            --indent;
+            emit(output, indent) << "}\n";
+        } else if (op.id == porth::OpIds::Store) {
+            emit(output, indent) << "{\n";
+            ++indent;
+            emit(output, indent) << "auto a = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "auto addr = static_cast<std::uintptr_t>(a);\n";
+            emit(output, indent) << "auto* p = reinterpret_cast<std::uint8_t*>(addr);\n";
+            emit(output, indent) << "auto b = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "*p = static_cast<std::uint8_t>(b);\n";
+            --indent;
+            emit(output, indent) << "}\n";
         }
     }
     output << labelName(static_cast<std::int64_t>(program.size())) << ":\n";
@@ -353,7 +403,7 @@ void usage(const char* thisProgram) {
 
 porth::Op parseTokenAsOp(const porth::Token& token) {
     const auto& [filePath, row, col, word] = token;
-    static_assert(porth::OpIds::Count.discriminant == 13, "Exhaustive handling of OpIds in parseTokenAsOp");
+    static_assert(porth::OpIds::Count.discriminant == 15, "Exhaustive handling of OpIds in parseTokenAsOp");
     if (word == "+") {
         return porth::plus();
     }
@@ -390,6 +440,12 @@ porth::Op parseTokenAsOp(const porth::Token& token) {
     if (word == "mem") {
         return porth::mem();
     }
+    if (word == "load") {
+        return porth::load();
+    }
+    if (word == "store") {
+        return porth::store();
+    }
     int pushArg;
     if (std::istringstream wordStream{word}; !(wordStream >> pushArg)) {
         std::cerr << filePath << ":" << row << ":" << col << ": attempt to convert non-integer value\n";
@@ -406,7 +462,7 @@ template <typename T> T stackPop(std::stack<T>& stack) {
 
 std::vector<porth::Op> crossReferenceBlocks(std::vector<porth::Op>&& program) {
     std::stack<size_t> stack;
-    static_assert(porth::OpIds::Count.discriminant == 13, "Exhaustive handling of OpIds in crossReferenceBlocks");
+    static_assert(porth::OpIds::Count.discriminant == 15, "Exhaustive handling of OpIds in crossReferenceBlocks");
     for (size_t ip = 0; ip < program.size(); ++ip) {
         if (const porth::Op& op = program[ip]; op.id == porth::OpIds::If) {
             stack.push(ip);
@@ -423,7 +479,7 @@ std::vector<porth::Op> crossReferenceBlocks(std::vector<porth::Op>&& program) {
                 program[ip].operand = program[blockIp].operand;
                 program[blockIp].operand = static_cast<std::int64_t>(ip) + 1;
             } else {
-                throw std::runtime_error{"`end` can only close if and while blocks for now"};
+                throw porth::SemanticError{"`end` can only close if and while blocks for now"};
             }
         } else if (op.id == porth::OpIds::While) {
             stack.push(ip);
@@ -465,8 +521,11 @@ int main(const int argc, char** argv) {
         std::vector<porth::Op> program;
         try {
             program = loadProgramFromFile(inputFilePath);
-        } catch (std::runtime_error& e) {
-            std::cerr << "ERROR: " << e.what() << "\n";
+        } catch (porth::ParseError& e) {
+            std::cerr << "ERROR: parse: " << e.what() << "\n";
+            return 1;
+        } catch (porth::SemanticError& e) {
+            std::cerr << "ERROR: semantic: " << e.what() << "\n";
             return 1;
         }
 
@@ -509,8 +568,11 @@ int main(const int argc, char** argv) {
         std::vector<porth::Op> program;
         try {
             program = loadProgramFromFile(inputFilePath);
-        } catch (std::runtime_error& e) {
-            std::cerr << "ERROR: " << e.what() << "\n";
+        } catch (porth::ParseError& e) {
+            std::cerr << "ERROR: parse: " << e.what() << "\n";
+            return 1;
+        } catch (porth::SemanticError& e) {
+            std::cerr << "ERROR: semantic: " << e.what() << "\n";
             return 1;
         }
 

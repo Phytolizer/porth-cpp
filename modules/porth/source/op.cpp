@@ -59,3 +59,11 @@ porth::Op porth::doo() {
 porth::Op porth::mem() {
     return Op{OpIds::Mem};
 }
+
+porth::Op porth::load() {
+    return Op{OpIds::Load};
+}
+
+porth::Op porth::store() {
+    return Op{OpIds::Store};
+}

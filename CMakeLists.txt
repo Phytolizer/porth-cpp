@@ -51,11 +51,13 @@ target_include_directories(
 )
 target_link_libraries(subprocess_h_cpp INTERFACE subprocess_h)
 
+set(PORTH_SOURCES "main.cpp" "lexer.cpp" "op.cpp" "parse_error.cpp"
+                  "semantic_error.cpp" "simulation_error.cpp"
+)
+list(TRANSFORM PORTH_SOURCES PREPEND "modules/porth/source/")
 add_executable(
-    porth_cpp
-    "modules/porth/source/main.cpp" "modules/porth/source/lexer.cpp"
-    "modules/porth/source/op.cpp"
-    "${PROJECT_BINARY_DIR}/include/iota_generated/op_id.hpp"
+    porth_cpp ${PORTH_SOURCES}
+              "${PROJECT_BINARY_DIR}/include/iota_generated/op_id.hpp"
 )
 target_link_libraries(porth_cpp PRIVATE subprocess_h_cpp span ranges)
 target_include_directories(
