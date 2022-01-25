@@ -36,11 +36,16 @@ void printArgs(const char* const* args) {
     std::cout << "\n";
 }
 
-int tryRunSubprocess(const char* const* args) {
-    printArgs(args);
+int tryRunSubprocess(const std::vector<std::string>& args) {
+    std::vector<const char*> realArgs;
+    std::transform(
+        args.begin(), args.end(), std::back_inserter(realArgs), [](const std::string& s) { return s.c_str(); });
+    realArgs.push_back(nullptr);
+
+    printArgs(realArgs.data());
     subprocess_s sub{};
     if (const int ret = subprocess_create(
-            args,
+            realArgs.data(),
             subprocess_option_inherit_environment | subprocess_option_no_window |
                 subprocess_option_combined_stdout_stderr | subprocess_option_enable_async,
             &sub);
@@ -86,58 +91,52 @@ int tryBuild(const std::string& cppOutputFilePath, const std::string& outFilePat
 #endif
 
 #ifdef _MSC_VER
-    const std::string outArg = "-Fo" + objPath;
-    const std::string asmArg = "-Fa" + asmPath;
-    const std::string exeArg = "-Fe" + outFilePath;
-    const char* clArgs[] = {
-        "cl",
-        "-nologo",           // suppress copyright message
-        "-w",                // suppress warning output
-        "-TP",               // this is c++ code
-        "-std:c++20",        // set c++ standard
-        "-O2",               // optimization level
-        "-EHsc",             // c++ exception option
-        outFilePath.c_str(), // file to compile
-        outArg.c_str(),      // obj name
-        asmArg.c_str(),      // also generate assembly
-        exeArg.c_str(),      // also generate executable
-        "-link",             // i want to link as well
-        nullptr,
-    };
-    if (const int ret = tryRunSubprocess(clArgs); ret != 0) {
+    if (const int ret = tryRunSubprocess({
+            "cl",
+            "-nologo",           // suppress copyright message
+            "-w",                // suppress warning output
+            "-TP",               // this is c++ code
+            "-std:c++20",        // set c++ standard
+            "-O2",               // optimization level
+            "-EHsc",             // c++ exception option
+            outFilePath,         // file to compile
+            "-Fo" + objPath,     // obj name
+            "-Fa" + asmPath,     // also generate assembly
+            "-Fe" + outFilePath, // also generate executable
+            "-link",             // i want to link as well
+        });
+        ret != 0) {
         return ret;
     }
 #else
-    const char* objArgs[] = {
-        "/usr/bin/env",
-        COMPILER,
-        "-w",
-        "-xc++",
-        "-std=c++20",
-        "-O2",
-        "-march=native",
-        "-c",
-        cppOutputFilePath.c_str(),
-        "-o",
-        objPath.c_str(),
-        nullptr,
-    };
-    if (const int ret = tryRunSubprocess(objArgs); ret != 0) {
+    if (const int ret = tryRunSubprocess({
+            "/usr/bin/env",
+            COMPILER,
+            "-w",
+            "-xc++",
+            "-std=c++20",
+            "-O2",
+            "-march=native",
+            "-c",
+            cppOutputFilePath,
+            "-o",
+            objPath,
+        });
+        ret != 0) {
         return ret;
     }
-    const char* linkArgs[] = {
-        "/usr/bin/env",
-        COMPILER,
-        "-w",
-        "-flto",
-        "-static",
-        "-march=native",
-        objPath.c_str(),
-        "-o",
-        outFilePath.c_str(),
-        nullptr,
-    };
-    if (const int ret = tryRunSubprocess(linkArgs); ret != 0) {
+    if (const int ret = tryRunSubprocess({
+            "/usr/bin/env",
+            COMPILER,
+            "-w",
+            "-flto",
+            "-static",
+            "-march=native",
+            objPath,
+            "-o",
+            outFilePath,
+        });
+        ret != 0) {
         return ret;
     }
 #endif
@@ -145,12 +144,11 @@ int tryBuild(const std::string& cppOutputFilePath, const std::string& outFilePat
     return 0;
 }
 
-int tryRunExecutable(const std::string& outFilePath) {
-    const char* exeArgs[] = {
-        outFilePath.c_str(),
-        nullptr,
-    };
-    return tryRunSubprocess(exeArgs);
+int tryRunExecutable(const std::string& outFilePath, const span::Span<char*> args) {
+    std::vector<std::string> combinedArgs;
+    combinedArgs.emplace_back(outFilePath);
+    std::transform(args.begin(), args.end(), std::back_inserter(combinedArgs), [](char* c) { return std::string{c}; });
+    return tryRunSubprocess(combinedArgs);
 }
 
 void usage(const char* thisProgram) {
@@ -399,10 +397,8 @@ int main(const int argc, char** argv) {
                 }
                 inputFilePathOrFlag = args[cursor++];
             }
-            inputFilePath = inputFilePathOrFlag;
-        } else {
-            inputFilePath = inputFilePathOrFlag;
         }
+        inputFilePath = inputFilePathOrFlag;
         std::vector<porth::Op> program;
         try {
             program = loadProgramFromFile(inputFilePath);
@@ -422,7 +418,7 @@ int main(const int argc, char** argv) {
             return ret;
         }
         if (runExecutable) {
-            if (const int ret = tryRunExecutable(outputFilePath); ret != 0) {
+            if (const int ret = tryRunExecutable(outputFilePath, args.subspan(cursor)); ret != 0) {
                 return ret;
             }
         }
