@@ -1,10 +1,12 @@
 #include "iota/iota.hpp"
 
 #include <iostream>
+#include <regex>
 #include <sstream>
 #include <vector>
 
-enum struct TokenKind {
+enum struct TokenKind
+{
     SomethingElse,
     Identifier,
     EqualsSign,
@@ -146,81 +148,92 @@ struct Iota {
     std::vector<Token> variants;
 };
 
+struct ParserError final : std::runtime_error {
+    explicit ParserError(const std::string& what) : std::runtime_error(what) {
+    }
+};
+
+struct Parser {
+    Iota iota;
+    const std::vector<Token>& tokens;
+    std::vector<Token>::const_iterator it;
+
+    explicit Parser(const std::vector<Token>& tokens) : tokens{tokens}, it{tokens.begin()} {
+    }
+
+    const Token& consume(const TokenKind kind, const std::string& message) {
+        if (!atToken(kind)) {
+            throw ParserError{message};
+        }
+        return next();
+    }
+
+    [[nodiscard]] bool atToken(const TokenKind kind) const {
+        return it != tokens.end() && it->kind == kind;
+    }
+
+    void pushNamespace(Token&& ns) {
+        iota.namespaces.emplace_back(std::move(ns));
+    }
+
+    void pushVariant(const Token& variant) {
+        iota.variants.emplace_back(variant);
+    }
+
+    void operator++() {
+        ++it;
+    }
+
+    const Token& next() {
+        return *it++;
+    }
+
+    [[nodiscard]] bool atEnd() const {
+        return it == tokens.end();
+    }
+
+    [[nodiscard]] Iota&& complete() {
+        if (!atEnd()) {
+            throw ParserError{"expected end of input"};
+        }
+        return std::move(iota);
+    }
+};
+
 Iota parse(const std::vector<Token>& tokens) {
-    Iota i;
-    auto it = tokens.begin();
-    if (it == tokens.end() || it->kind != TokenKind::Identifier) {
-        std::cerr << "iota parse error: must begin with an identifier\n";
-        return i;
-    }
-    const Token* ident = &*it;
-    ++it;
-    if (it != tokens.end() && it->kind == TokenKind::ColonColon) {
-        while (it != tokens.end() && it->kind == TokenKind::ColonColon) {
-            i.namespaces.emplace_back(*ident);
-            ++it;
-            if (it == tokens.end() || it->kind != TokenKind::Identifier) {
-                std::cerr << "iota parse error: '::' must be followed by an identifier\n";
-                return i;
-            }
-            ident = &*it;
-            ++it;
+    Parser parser{tokens};
+    Token ident = parser.consume(TokenKind::Identifier, "must begin with an identifier");
+    if (parser.atToken(TokenKind::ColonColon)) {
+        while (parser.atToken(TokenKind::ColonColon)) {
+            parser.pushNamespace(std::move(ident));
+            ++parser;
+            ident = parser.consume(TokenKind::Identifier, "'::' must be followed by an identifier");
+            ++parser;
         }
-        i.name = *ident;
+        parser.iota.name = std::move(ident);
     } else {
-        i.name = *it;
-        ++it;
+        parser.iota.name = parser.next();
     }
-    if (it == tokens.end() || it->kind != TokenKind::EqualsSign) {
-        std::cerr << "iota parse error: iota name must be followed by '='\n";
-        return i;
+    parser.consume(TokenKind::EqualsSign, "iota name must be followed by '='");
+    parser.consume(TokenKind::IotaKeyword, "'=' must be followed by 'iota'");
+    parser.consume(TokenKind::LeftBrace, "'iota' must be followed by '{'");
+    while (!parser.atEnd() && !parser.atToken(TokenKind::RightBrace)) {
+        parser.pushVariant(parser.consume(TokenKind::Identifier, "variant name expected"));
+        parser.consume(TokenKind::Comma, "comma expected after variant name");
     }
-    ++it;
-    if (it == tokens.end() || it->kind != TokenKind::IotaKeyword) {
-        std::cerr << "iota parse error: '=' must be followed by 'iota'\n";
-        return i;
-    }
-    ++it;
-    if (it == tokens.end() || it->kind != TokenKind::LeftBrace) {
-        std::cerr << "iota parse error: 'iota' must be followed by '{'\n";
-        return i;
-    }
-    ++it;
-    while (it != tokens.end() && it->kind != TokenKind::RightBrace) {
-        if (it->kind != TokenKind::Identifier) {
-            std::cerr << "iota parse error: variant name expected\n";
-            return i;
-        }
-        i.variants.push_back(*it);
-        ++it;
-        if (it == tokens.end() || it->kind != TokenKind::Comma) {
-            std::cerr << "iota parse error: comma expected after variant name\n";
-            return i;
-        }
-        ++it;
-    }
-    if (it == tokens.end()) {
-        std::cerr << "iota parse error: expected '}' at end of input\n";
-        return i;
-    }
-    i.parseSuccess = true;
-    return i;
+    parser.consume(TokenKind::RightBrace, "expected '}' after variant names");
+    parser.consume(TokenKind::Semicolon, "expected ';' after '}'");
+    return parser.complete();
 }
 
 std::string pluralize(const std::string& text) {
-    std::string result;
-    std::copy(text.begin(), text.end() - 2, std::back_inserter(result));
-    if (result.ends_with('y')) {
-        std::copy(text.end() - 2, text.end() - 1, std::back_inserter(result));
-        result += "ies";
-    } else if (result.ends_with('s') || result.ends_with("sh")) {
-        std::copy(text.end() - 2, text.end(), std::back_inserter(result));
-        result += "es";
-    } else {
-        std::copy(text.end() - 2, text.end(), std::back_inserter(result));
-        result += "s";
+    if (std::regex_search(text, std::regex{"y$"})) {
+        return std::regex_replace(text, std::regex{"y$"}, "ies");
     }
-    return result;
+    if (std::regex_search(text, std::regex{"sh?$"})) {
+        return text + "es";
+    }
+    return text + "s";
 }
 
 void printNamespaces(std::ostream& output, const std::vector<Token>& namespaces) {
@@ -267,11 +280,11 @@ void emitCode(std::ostream& output, const Iota& i) {
 
 int iota::generate(const std::istream& input, std::ostream& output) {
     const std::vector<Token> tokens = lex(input);
-    const Iota i = parse(tokens);
-    if (i.parseSuccess) {
-        emitCode(output, i);
-        return 0;
+    try {
+        emitCode(output, parse(tokens));
+    } catch (const ParserError& e) {
+        std::cerr << "iota parse error: " << e.what() << "\n";
+        return 1;
     }
-    std::cerr << "iota: could not parse\n";
-    return 1;
+    return 0;
 }
