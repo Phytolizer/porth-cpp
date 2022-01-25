@@ -80,7 +80,7 @@ std::string replaceOrAppendExtension(
 }
 
 int tryBuild(const std::string& cppOutputFilePath, const std::string& outFilePath) {
-    constexpr const char* COMPILER = "clang++";
+    constexpr auto COMPILER = "clang++";
 
     const std::regex extensionPattern{"\\.cpp$"};
 
@@ -91,6 +91,8 @@ int tryBuild(const std::string& cppOutputFilePath, const std::string& outFilePat
 #endif
 
 #ifdef _MSC_VER
+    const std::string asmPath = replaceOrAppendExtension(cppOutputFilePath, extensionPattern, ".asm");
+
     if (const int ret = tryRunSubprocess({
             "cl",
             "-nologo",           // suppress copyright message
@@ -99,7 +101,7 @@ int tryBuild(const std::string& cppOutputFilePath, const std::string& outFilePat
             "-std:c++20",        // set c++ standard
             "-O2",               // optimization level
             "-EHsc",             // c++ exception option
-            outFilePath,         // file to compile
+            cppOutputFilePath,   // file to compile
             "-Fo" + objPath,     // obj name
             "-Fa" + asmPath,     // also generate assembly
             "-Fe" + outFilePath, // also generate executable

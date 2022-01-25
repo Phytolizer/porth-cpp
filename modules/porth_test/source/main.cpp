@@ -1,19 +1,18 @@
-#include <algorithm>
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <ranges/ranges.hpp>
 #include <regex>
 #include <span/span.hpp>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <subprocess.h>
-#include <subprocess/destroy_guard.hpp>
 #include <testconfig.hpp>
 #include <vector>
 
-struct SubprocessError : std::runtime_error {
+struct SubprocessError final : std::runtime_error {
     explicit SubprocessError(const std::string& message) : std::runtime_error{message} {
     }
 };
@@ -30,8 +29,7 @@ std::string runSubprocess(const std::vector<std::string>& args) {
 
     subprocess_s sub{};
     std::vector<const char*> cArgs;
-    std::transform(
-        args.begin(), args.end(), std::back_inserter(cArgs), [](const std::string& arg) { return arg.c_str(); });
+    my_ranges::transform(args, std::back_inserter(cArgs), [](const std::string& arg) { return arg.c_str(); });
     cArgs.push_back(nullptr);
     if (const int ret = subprocess_create(
             cArgs.data(),
@@ -63,15 +61,16 @@ std::string runSubprocess(const std::vector<std::string>& args) {
         throw SubprocessError{errorMessage.str()};
     }
 
-    return result;
+    std::regex crlf{"\r\n"};
+
+    return std::regex_replace(result, crlf, "\n");
 }
 
 int test(const std::filesystem::path& folder) {
     std::size_t simFailed = 0;
     std::size_t comFailed = 0;
 
-    const std::filesystem::recursive_directory_iterator tests{folder};
-    for (const auto& entry : tests) {
+    for (const std::filesystem::recursive_directory_iterator tests{folder}; const auto& entry : tests) {
         if (entry.is_directory()) {
             continue;
         }
@@ -89,11 +88,12 @@ int test(const std::filesystem::path& folder) {
             std::cerr << "[ERROR] failed to read " << txtPath.string() << "\n";
             return 1;
         }
-        const std::string expectedOutput = txtContentsStream.str();
+        const std::regex crlf{"\r\n"};
+        const std::string expectedOutput = std::regex_replace(txtContentsStream.str(), crlf, "\n");
 
         try {
-            const std::string simOutput = runSubprocess({PORTH_CPP_EXE, "sim", entry.path().string()});
-            if (simOutput != expectedOutput) {
+            if (const std::string simOutput = runSubprocess({PORTH_CPP_EXE, "sim", entry.path().string()});
+                simOutput != expectedOutput) {
                 std::cerr << "[ERROR] Unexpected simulation output\n";
                 std::cerr << "  Expected:\n";
                 std::istringstream expectedStream{expectedOutput};
@@ -119,11 +119,10 @@ int test(const std::filesystem::path& folder) {
                 PORTH_CPP_EXE,
                 "com",
                 "-o",
-                exePath,
+                exePath.string(),
                 entry.path().string(),
             });
-            const std::string comOutput = runSubprocess({exePath});
-            if (comOutput != expectedOutput) {
+            if (const std::string comOutput = runSubprocess({exePath.string()}); comOutput != expectedOutput) {
                 std::cerr << "[ERROR] Unexpected compilation output\n";
                 std::cerr << "  Expected:\n";
                 std::istringstream expectedStream{expectedOutput};
@@ -153,8 +152,7 @@ int test(const std::filesystem::path& folder) {
 }
 
 void record(const std::filesystem::path& folder) {
-    const std::filesystem::recursive_directory_iterator tests{folder};
-    for (const auto& entry : tests) {
+    for (const std::filesystem::recursive_directory_iterator tests{folder}; const auto& entry : tests) {
         if (entry.is_directory()) {
             continue;
         }
@@ -174,8 +172,7 @@ void record(const std::filesystem::path& folder) {
             std::cout << "[ERROR] " << e.what() << "\n";
             return;
         }
-        std::ofstream txtFile{txtPath.string()};
-        if (!(txtFile << txtContentsStream.str())) {
+        if (std::ofstream txtFile{txtPath.string()}; !(txtFile << txtContentsStream.str())) {
             std::cerr << "[ERROR] failed to write " << txtPath.string() << "\n";
             return;
         }
@@ -192,16 +189,15 @@ void usage(const std::string& exeName) {
     std::cout << "    help         Print this message to stdout.\n";
 }
 
-int main(int argc, char** argv) {
-    span::Span<char*> args{argv, static_cast<std::size_t>(argc)};
+int main(const int argc, char** argv) {
+    const span::Span<char*> args{argv, static_cast<std::size_t>(argc)};
     std::size_t cursor = 0;
     const std::string exeName = args[cursor++];
     std::filesystem::path folder = std::filesystem::current_path() / "tests";
     std::string subcmd = "test";
 
     while (args.size() > cursor) {
-        const std::string arg = args[cursor++];
-        if (arg == "-f") {
+        if (const std::string arg = args[cursor++]; arg == "-f") {
             if (args.size() == cursor) {
                 std::cout << "[ERROR] no <folder> is provided for option '-f'\n";
                 return 1;

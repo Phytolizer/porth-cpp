@@ -16,5 +16,9 @@ template <typename Range, typename OutputIterator> constexpr OutputIterator copy
     return std::copy(range.begin(), range.end(), output);
 }
 
+template <typename Range, typename OutputIterator, typename Projection> constexpr OutputIterator transform(Range&& range, OutputIterator output, Projection projection) {
+    return std::transform(range.begin(), range.end(), output, projection);
+}
+
 } // namespace my_ranges
 #endif
