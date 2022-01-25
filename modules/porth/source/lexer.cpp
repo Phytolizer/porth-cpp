@@ -1,12 +1,24 @@
 #include "porth/lexer.hpp"
 
-#include <ranges/ranges.hpp>
 #include <fstream>
+#include <ranges/ranges.hpp>
 #include <sstream>
-#include <stack>
 
 std::string_view::iterator trimLeft(std::string_view line, const std::string_view::iterator col) {
     return std::find_if(col, line.end(), [](const char c) { return !std::isspace(c); });
+}
+
+porth::Token lexWord(
+    const std::string& filePath,
+    const std::size_t lineNumber,
+    const std::size_t columnNumber,
+    const std::string& text) {
+    for (const char c : text) {
+        if (!std::isdigit(c)) {
+            return {porth::TokenIds::Word, filePath, lineNumber, columnNumber, text};
+        }
+    }
+    return {porth::TokenIds::Int, filePath, lineNumber, columnNumber, text};
 }
 
 std::vector<porth::Token> lexLine(const std::string& filePath, const size_t lineNumber, std::string_view line) {
@@ -18,7 +30,7 @@ std::vector<porth::Token> lexLine(const std::string& filePath, const size_t line
         if (tokenText == "//") {
             break;
         }
-        result.emplace_back(filePath, lineNumber + 1, col - line.begin() + 1, std::move(tokenText));
+        result.emplace_back(lexWord(filePath, lineNumber + 1, col - line.begin() + 1, tokenText));
         col = trimLeft(line, colEnd);
     }
     return result;

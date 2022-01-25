@@ -1,0 +1,4 @@
+porth::TokenId = iota {
+    Word,
+    Int,
+};

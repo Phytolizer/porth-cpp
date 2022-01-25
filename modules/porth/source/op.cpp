@@ -2,141 +2,19 @@
 
 #include "iota_generated/op_id.hpp"
 
-porth::Op::Op(const OpId id) : id(id), operand(0) {
+porth::Op::Op(const OpId id, std::string filePath, const std::size_t lineNumber, const std::size_t columnNumber)
+    : Op(id, std::move(filePath), lineNumber, columnNumber, 0) {
 }
 
-porth::Op::Op(const OpId id, const std::int64_t operand) : id(id), operand(operand) {
+porth::Op::Op(
+    const OpId id,
+    std::string filePath,
+    const std::size_t lineNumber,
+    const std::size_t columnNumber,
+    const std::int64_t operand)
+    : id(id), filePath(std::move(filePath)), lineNumber(lineNumber), columnNumber(columnNumber), operand(operand) {
 }
 
 std::ostream& operator<<(std::ostream& os, const porth::Op& op) {
     return os << op.id.name;
-}
-
-porth::Op porth::push(const std::int64_t x) {
-    return Op{OpIds::Push, x};
-}
-
-porth::Op porth::plus() {
-    return Op{OpIds::Plus};
-}
-
-porth::Op porth::minus() {
-    return Op{OpIds::Minus};
-}
-
-porth::Op porth::eq() {
-    return Op{OpIds::Eq};
-}
-
-porth::Op porth::gt() {
-    return Op{OpIds::Gt};
-}
-
-porth::Op porth::lt() {
-    return Op{OpIds::Lt};
-}
-
-porth::Op porth::ge() {
-    return Op{OpIds::Ge};
-}
-
-porth::Op porth::le() {
-    return Op{OpIds::Le};
-}
-
-porth::Op porth::iff() {
-    return Op{OpIds::If};
-}
-
-porth::Op porth::elze() {
-    return Op{OpIds::Else};
-}
-
-porth::Op porth::end() {
-    return Op{OpIds::End};
-}
-
-porth::Op porth::print() {
-    return Op{OpIds::Print};
-}
-
-porth::Op porth::dup() {
-    return Op{OpIds::Dup};
-}
-
-porth::Op porth::dup2() {
-    return Op{OpIds::Dup2};
-}
-
-porth::Op porth::swap() {
-    return Op{OpIds::Swap};
-}
-
-porth::Op porth::drop() {
-    return Op{OpIds::Drop};
-}
-
-porth::Op porth::wile() {
-    return Op{OpIds::While};
-}
-
-porth::Op porth::doo() {
-    return Op{OpIds::Do};
-}
-
-porth::Op porth::mem() {
-    return Op{OpIds::Mem};
-}
-
-porth::Op porth::load() {
-    return Op{OpIds::Load};
-}
-
-porth::Op porth::store() {
-    return Op{OpIds::Store};
-}
-
-porth::Op porth::syscall1() {
-    return Op{OpIds::Syscall1};
-}
-
-porth::Op porth::syscall2() {
-    return Op{OpIds::Syscall2};
-}
-
-porth::Op porth::syscall3() {
-    return Op{OpIds::Syscall3};
-}
-
-porth::Op porth::syscall4() {
-    return Op{OpIds::Syscall4};
-}
-
-porth::Op porth::syscall5() {
-    return Op{OpIds::Syscall5};
-}
-
-porth::Op porth::syscall6() {
-    return Op{OpIds::Syscall6};
-}
-porth::Op porth::shr() {
-    return Op{OpIds::Shr};
-}
-porth::Op porth::shl() {
-    return Op{OpIds::Shl};
-}
-porth::Op porth::bor() {
-    return Op{OpIds::Bor};
-}
-porth::Op porth::band() {
-    return Op{OpIds::Band};
-}
-porth::Op porth::over() {
-    return Op{OpIds::Over};
-}
-porth::Op porth::mod() {
-    return Op{OpIds::Mod};
-}
-porth::Op porth::ne() {
-    return Op{OpIds::Ne};
 }

@@ -1,7 +1,7 @@
+#include "porth/builtin_words.hpp"
 #include "porth/com.hpp"
 #include "porth/lexer.hpp"
 #include "porth/op.hpp"
-#include "porth/parse_error.hpp"
 #include "porth/semantic_error.hpp"
 #include "porth/sim.hpp"
 #include "porth/simulation_error.hpp"
@@ -9,6 +9,7 @@
 #include <config.hpp>
 #include <iostream>
 #include <iota_generated/op_id.hpp>
+#include <iota_generated/token_id.hpp>
 #include <ranges/ranges.hpp>
 #include <regex>
 #include <span/span.hpp>
@@ -159,114 +160,64 @@ void usage(const char* thisProgram) {
     std::cerr << "    com [OPTIONS] <file>   Compile the program\n";
 }
 
+struct ParseError : std::runtime_error {
+    std::string message;
+    ParseError(
+        const std::string& filePath,
+        const std::size_t lineNumber,
+        const std::size_t columnNumber,
+        const std::string& message)
+        : std::runtime_error(message) {
+        std::ostringstream msgStream;
+        msgStream << filePath << ":" << lineNumber << ":" << columnNumber << ": " << message;
+        this->message = msgStream.str();
+    }
+
+    [[nodiscard]] const char* what() const override {
+        return message.c_str();
+    }
+};
+
+struct UnknownWordError final : ParseError {
+    UnknownWordError(
+        const std::string& filePath,
+        const std::size_t lineNumber,
+        const std::size_t columnNumber,
+        const std::string& word)
+        : ParseError(filePath, lineNumber, columnNumber, "unknown word '" + word + "'") {
+    }
+};
+
+struct BadIntegerError final : ParseError {
+    BadIntegerError(
+        const std::string& filePath,
+        const std::size_t lineNumber,
+        const std::size_t columnNumber,
+        const std::string& word)
+        : ParseError(filePath, lineNumber, columnNumber, "attempt to convert to int64_t failed: " + word) {
+    }
+};
+
 porth::Op parseTokenAsOp(const porth::Token& token) {
-    const auto& [filePath, row, col, word] = token;
-    static_assert(porth::OpIds::Count.discriminant == 34, "Exhaustive handling of OpIds in parseTokenAsOp");
-    if (word == "+") {
-        return porth::plus();
+    static_assert(porth::TokenIds::Count.discriminant == 2, "Exhaustive token handling in parseTokenAsOp");
+    const auto& [kind, filePath, row, col, word] = token;
+    if (kind == porth::TokenIds::Word) {
+        for (const auto& [text, id] : porth::BUILTIN_WORDS) {
+            if (word == text) {
+                return porth::Op{id, filePath, row, col};
+            }
+        }
+        throw UnknownWordError{filePath, row, col, word};
     }
-    if (word == "-") {
-        return porth::minus();
+    if (kind == porth::TokenIds::Int) {
+        std::int64_t pushArg;
+        if (std::istringstream wordStream{word}; !(wordStream >> pushArg)) {
+            throw BadIntegerError{filePath, row, col, word};
+        }
+        return porth::Op{porth::OpIds::Push, filePath, row, col, pushArg};
     }
-    if (word == "=") {
-        return porth::eq();
-    }
-    if (word == "!=") {
-        return porth::ne();
-    }
-    if (word == ">") {
-        return porth::gt();
-    }
-    if (word == "<") {
-        return porth::lt();
-    }
-    if (word == ">=") {
-        return porth::ge();
-    }
-    if (word == "<=") {
-        return porth::le();
-    }
-    if (word == "print") {
-        return porth::print();
-    }
-    if (word == "if") {
-        return porth::iff();
-    }
-    if (word == "else") {
-        return porth::elze();
-    }
-    if (word == "end") {
-        return porth::end();
-    }
-    if (word == "dup") {
-        return porth::dup();
-    }
-    if (word == "dup2") {
-        return porth::dup2();
-    }
-    if (word == "swap") {
-        return porth::swap();
-    }
-    if (word == "drop") {
-        return porth::drop();
-    }
-    if (word == "while") {
-        return porth::wile();
-    }
-    if (word == "do") {
-        return porth::doo();
-    }
-    if (word == "mem") {
-        return porth::mem();
-    }
-    if (word == ",") {
-        return porth::load();
-    }
-    if (word == ".") {
-        return porth::store();
-    }
-    if (word == "syscall1") {
-        return porth::syscall1();
-    }
-    if (word == "syscall2") {
-        return porth::syscall2();
-    }
-    if (word == "syscall3") {
-        return porth::syscall3();
-    }
-    if (word == "syscall4") {
-        return porth::syscall4();
-    }
-    if (word == "syscall5") {
-        return porth::syscall5();
-    }
-    if (word == "syscall6") {
-        return porth::syscall6();
-    }
-    if (word == "shr") {
-        return porth::shr();
-    }
-    if (word == "shl") {
-        return porth::shl();
-    }
-    if (word == "bor") {
-        return porth::bor();
-    }
-    if (word == "band") {
-        return porth::band();
-    }
-    if (word == "over") {
-        return porth::over();
-    }
-    if (word == "mod") {
-        return porth::mod();
-    }
-    std::int64_t pushArg;
-    if (std::istringstream wordStream{word}; !(wordStream >> pushArg)) {
-        std::cerr << filePath << ":" << row << ":" << col << ": attempt to convert non-integer value\n";
-        throw std::runtime_error{"attempt to convert non-integer value"};
-    }
-    return porth::push(pushArg);
+
+    throw std::runtime_error{"unreachable"};
 }
 
 template <typename T> T stackPop(std::stack<T>& stack) {
@@ -351,7 +302,7 @@ int main(const int argc, char** argv) {
         std::vector<porth::Op> program;
         try {
             program = loadProgramFromFile(inputFilePath);
-        } catch (porth::ParseError& e) {
+        } catch (ParseError& e) {
             std::cerr << "[ERROR] parse: " << e.what() << "\n";
             return 1;
         } catch (porth::SemanticError& e) {
@@ -399,7 +350,7 @@ int main(const int argc, char** argv) {
         std::vector<porth::Op> program;
         try {
             program = loadProgramFromFile(inputFilePath);
-        } catch (porth::ParseError& e) {
+        } catch (ParseError& e) {
             std::cerr << "[ERROR] parse: " << e.what() << "\n";
             return 1;
         } catch (porth::SemanticError& e) {

@@ -42,6 +42,17 @@ add_custom_command(
         "${PROJECT_BINARY_DIR}/include/iota_generated/op_id.hpp"
 )
 
+add_custom_command(
+    OUTPUT "${PROJECT_BINARY_DIR}/include/iota_generated/token_id.hpp"
+    DEPENDS "${PROJECT_SOURCE_DIR}/modules/porth/iota/token_id.iota"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory
+            "${PROJECT_BINARY_DIR}/include/iota_generated"
+    COMMAND
+        "$<TARGET_FILE:iota_driver>"
+        "${PROJECT_SOURCE_DIR}/modules/porth/iota/token_id.iota"
+        "${PROJECT_BINARY_DIR}/include/iota_generated/token_id.hpp"
+)
+
 add_library(subprocess_h INTERFACE)
 target_include_directories(subprocess_h INTERFACE "modules/subprocess_h")
 
@@ -56,15 +67,15 @@ set(PORTH_SOURCES
     "com.cpp"
     "lexer.cpp"
     "op.cpp"
-    "parse_error.cpp"
     "semantic_error.cpp"
     "sim.cpp"
     "simulation_error.cpp"
 )
 list(TRANSFORM PORTH_SOURCES PREPEND "modules/porth/source/")
 add_executable(
-    porth_cpp ${PORTH_SOURCES}
-              "${PROJECT_BINARY_DIR}/include/iota_generated/op_id.hpp"
+    porth_cpp
+    ${PORTH_SOURCES} "${PROJECT_BINARY_DIR}/include/iota_generated/op_id.hpp"
+    "${PROJECT_BINARY_DIR}/include/iota_generated/token_id.hpp"
 )
 target_link_libraries(porth_cpp PRIVATE subprocess_h_cpp span ranges)
 target_include_directories(

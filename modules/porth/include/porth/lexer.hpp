@@ -1,17 +1,20 @@
 #pragma once
 
+#include <iota_generated/token_id.hpp>
 #include <string>
 #include <vector>
 
 namespace porth {
 
 struct Token {
+    TokenId id;
     std::string filePath;
     size_t lineNumber;
     size_t columnNumber;
     std::string token;
-    Token(std::string filePath, const size_t lineNumber, const size_t columnNumber, std::string token)
-        : filePath(std::move(filePath)), lineNumber(lineNumber), columnNumber(columnNumber), token(std::move(token)) {
+    Token(const TokenId id, std::string filePath, const size_t lineNumber, const size_t columnNumber, std::string token)
+        : id(id), filePath(std::move(filePath)), lineNumber(lineNumber), columnNumber(columnNumber),
+          token(std::move(token)) {
     }
 };
 
