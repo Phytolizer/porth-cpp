@@ -8,7 +8,7 @@ porth::Op::Op(const OpId id) : id(id), operand(0) {
 porth::Op::Op(const OpId id, const std::int64_t operand) : id(id), operand(operand) {
 }
 
-porth::Op porth::push(const int x) {
+porth::Op porth::push(const std::int64_t x) {
     return Op{OpIds::Push, x};
 }
 

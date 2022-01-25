@@ -262,7 +262,7 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
     emit(output, indent) << "int main() {\n";
     ++indent;
     emit(output, indent) << "std::array<std::uint8_t, " << MEM_CAPACITY << "> mem;\n";
-    emit(output, indent) << "std::stack<int> _porth_stack;\n";
+    emit(output, indent) << "std::stack<std::int64_t> _porth_stack;\n";
     static_assert(porth::OpIds::Count.discriminant == 34, "Exhaustive handling of OpIds in compileProgram");
     for (size_t ip = 0; ip < program.size(); ++ip) {
         const porth::Op& op = program[ip];
@@ -806,7 +806,7 @@ porth::Op parseTokenAsOp(const porth::Token& token) {
     if (word == "mod") {
         return porth::mod();
     }
-    int pushArg;
+    std::int64_t pushArg;
     if (std::istringstream wordStream{word}; !(wordStream >> pushArg)) {
         std::cerr << filePath << ":" << row << ":" << col << ": attempt to convert non-integer value\n";
         throw std::runtime_error{"attempt to convert non-integer value"};

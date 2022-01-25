@@ -13,7 +13,7 @@ struct Op {
     Op(OpId id, std::int64_t operand);
 };
 
-Op push(int x);
+Op push(std::int64_t x);
 Op plus();
 Op minus();
 Op eq();
