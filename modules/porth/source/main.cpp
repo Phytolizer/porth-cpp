@@ -506,6 +506,7 @@ int tryBuild(const std::string& cppOutputFilePath, const std::string& outFilePat
         COMPILER,
         "-w",
         "-flto",
+        "-static",
         "-march=native",
         objPath.c_str(),
         "-o",
