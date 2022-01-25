@@ -60,6 +60,10 @@ porth::Op porth::swap() {
     return Op{OpIds::Swap};
 }
 
+porth::Op porth::drop() {
+    return Op{OpIds::Drop};
+}
+
 porth::Op porth::wile() {
     return Op{OpIds::While};
 }

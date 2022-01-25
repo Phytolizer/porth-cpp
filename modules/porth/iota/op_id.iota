@@ -12,6 +12,7 @@ porth::OpId = iota {
     Dup,
     Dup2,
     Swap,
+    Drop,
     While,
     Do,
     Mem,
