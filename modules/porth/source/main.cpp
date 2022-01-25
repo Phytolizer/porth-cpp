@@ -35,7 +35,7 @@ template <typename T> T vecPop(std::vector<T>& v) {
 }
 
 void simulateProgram(const std::vector<porth::Op>& program) {
-    static_assert(porth::OpIds::Count.discriminant == 21, "Exhaustive handling of OpIds in simulateProgram");
+    static_assert(porth::OpIds::Count.discriminant == 23, "Exhaustive handling of OpIds in simulateProgram");
     std::vector<std::int64_t> stack;
     std::array<std::uint8_t, MEM_CAPACITY> mem;
     // execution is not linear, so we use a for loop with an index
@@ -63,6 +63,11 @@ void simulateProgram(const std::vector<porth::Op>& program) {
             const std::int64_t a = vecPop(stack);
             stack.push_back(a > b ? 1 : 0);
             ++ip;
+        } else if (op.id == porth::OpIds::Lt) {
+            const std::int64_t b = vecPop(stack);
+            const std::int64_t a = vecPop(stack);
+            stack.push_back(a < b ? 1 : 0);
+            ++ip;
         } else if (op.id == porth::OpIds::If) {
             if (const std::int64_t a = vecPop(stack); a == 0) {
                 // simulate a goto
@@ -80,6 +85,14 @@ void simulateProgram(const std::vector<porth::Op>& program) {
         } else if (op.id == porth::OpIds::Dup) {
             const std::int64_t a = stack.back();
             stack.push_back(a);
+            ++ip;
+        } else if (op.id == porth::OpIds::Dup2) {
+            const std::int64_t b = vecPop(stack);
+            const std::int64_t a = vecPop(stack);
+            stack.push_back(a);
+            stack.push_back(b);
+            stack.push_back(a);
+            stack.push_back(b);
             ++ip;
         } else if (op.id == porth::OpIds::While) {
             ++ip;
@@ -189,7 +202,7 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
     ++indent;
     emit(output, indent) << "std::array<std::uint8_t, " << MEM_CAPACITY << "> mem;\n";
     emit(output, indent) << "std::stack<int> _porth_stack;\n";
-    static_assert(porth::OpIds::Count.discriminant == 21, "Exhaustive handling of OpIds in compileProgram");
+    static_assert(porth::OpIds::Count.discriminant == 23, "Exhaustive handling of OpIds in compileProgram");
     for (size_t ip = 0; ip < program.size(); ++ip) {
         const porth::Op& op = program[ip];
         emit(output, indent) << "// -- " << op.id.name << " --\n";
@@ -236,6 +249,16 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
             emit(output, indent) << "_porth_stack.push(a > b ? 1 : 0);\n";
             --indent;
             emit(output, indent) << "}\n";
+        } else if (op.id == porth::OpIds::Lt) {
+            emit(output, indent) << "{\n";
+            ++indent;
+            emit(output, indent) << "auto b = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "auto a = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "_porth_stack.push(a < b ? 1 : 0);\n";
+            --indent;
+            emit(output, indent) << "}\n";
         } else if (op.id == porth::OpIds::If) {
             emit(output, indent) << "{\n";
             ++indent;
@@ -261,6 +284,19 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
             ++indent;
             emit(output, indent) << "auto a = _porth_stack.top();\n";
             emit(output, indent) << "_porth_stack.push(a);\n";
+            --indent;
+            emit(output, indent) << "}\n";
+        } else if (op.id == porth::OpIds::Dup2) {
+            emit(output, indent) << "{\n";
+            ++indent;
+            emit(output, indent) << "auto b = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "auto a = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "_porth_stack.push(a);\n";
+            emit(output, indent) << "_porth_stack.push(b);\n";
+            emit(output, indent) << "_porth_stack.push(a);\n";
+            emit(output, indent) << "_porth_stack.push(b);\n";
             --indent;
             emit(output, indent) << "}\n";
         } else if (op.id == porth::OpIds::While) {
@@ -501,7 +537,7 @@ void usage(const char* thisProgram) {
 
 porth::Op parseTokenAsOp(const porth::Token& token) {
     const auto& [filePath, row, col, word] = token;
-    static_assert(porth::OpIds::Count.discriminant == 21, "Exhaustive handling of OpIds in parseTokenAsOp");
+    static_assert(porth::OpIds::Count.discriminant == 23, "Exhaustive handling of OpIds in parseTokenAsOp");
     if (word == "+") {
         return porth::plus();
     }
@@ -513,6 +549,9 @@ porth::Op parseTokenAsOp(const porth::Token& token) {
     }
     if (word == ">") {
         return porth::gt();
+    }
+    if (word == "<") {
+        return porth::lt();
     }
     if (word == "dump") {
         return porth::dump();
@@ -528,6 +567,9 @@ porth::Op parseTokenAsOp(const porth::Token& token) {
     }
     if (word == "dup") {
         return porth::dup();
+    }
+    if (word == "dup2") {
+        return porth::dup2();
     }
     if (word == "while") {
         return porth::wile();
@@ -578,7 +620,7 @@ template <typename T> T stackPop(std::stack<T>& stack) {
 
 std::vector<porth::Op> crossReferenceBlocks(std::vector<porth::Op>&& program) {
     std::stack<size_t> stack;
-    static_assert(porth::OpIds::Count.discriminant == 21, "Exhaustive handling of OpIds in crossReferenceBlocks");
+    static_assert(porth::OpIds::Count.discriminant == 23, "Exhaustive handling of OpIds in crossReferenceBlocks");
     for (size_t ip = 0; ip < program.size(); ++ip) {
         if (const porth::Op& op = program[ip]; op.id == porth::OpIds::If) {
             stack.push(ip);

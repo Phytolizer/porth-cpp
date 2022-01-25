@@ -28,6 +28,10 @@ porth::Op porth::gt() {
     return Op{OpIds::Gt};
 }
 
+porth::Op porth::lt() {
+    return Op{OpIds::Lt};
+}
+
 porth::Op porth::iff() {
     return Op{OpIds::If};
 }
@@ -46,6 +50,10 @@ porth::Op porth::dump() {
 
 porth::Op porth::dup() {
     return Op{OpIds::Dup};
+}
+
+porth::Op porth::dup2() {
+    return Op{OpIds::Dup2};
 }
 
 porth::Op porth::wile() {

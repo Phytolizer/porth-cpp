@@ -2,6 +2,13 @@
 10 20 30 dump dump dump
 10 dump 20 dump 30 dump
 
+11111111 dump
+
 // dup
 420 dup dup dump dump dump
 69 dup dump dup dump dump
+
+11111111 dump
+
+// dup2
+69 420 dup2 dump dump dump dump
