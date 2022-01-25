@@ -251,7 +251,7 @@ std::ostream& emit(std::ostream& output, const size_t indent) {
 int compileProgram(const std::vector<porth::Op>& program, const std::string& outFilePath) {
     std::ofstream output{outFilePath};
     if (!output) {
-        std::cerr << "ERROR: failed to open '" << outFilePath << "' for writing\n";
+        std::cerr << "[ERROR] failed to open '" << outFilePath << "' for writing\n";
         return 1;
     }
     size_t indent = 0;
@@ -587,7 +587,7 @@ int tryRunSubprocess(const char* const* args) {
                 subprocess_option_combined_stdout_stderr | subprocess_option_enable_async,
             &sub);
         ret != 0) {
-        std::cerr << "ERROR: " << args[0] << " invocation failed\n";
+        std::cerr << "[ERROR] " << args[0] << " invocation failed\n";
         return ret;
     }
     subprocess::DestroyGuard dg{&sub};
@@ -598,11 +598,11 @@ int tryRunSubprocess(const char* const* args) {
     }
     int code = 0;
     if (const int ret = subprocess_join(&sub, &code); ret != 0) {
-        std::cerr << "ERROR: failed to wait on " << args[0] << " process\n";
+        std::cerr << "[ERROR] failed to wait on " << args[0] << " process\n";
         return ret;
     }
     if (code != 0) {
-        std::cerr << "ERROR: " << args[0] << " returned non-zero exit code\n";
+        std::cerr << "[ERROR] " << args[0] << " returned non-zero exit code\n";
         return code;
     }
     return 0;
@@ -867,7 +867,7 @@ int main(const int argc, char** argv) {
 
     if (args.size() == cursor) {
         usage(thisProgram);
-        std::cerr << "ERROR: no subcommand is provided\n";
+        std::cerr << "[ERROR] no subcommand is provided\n";
         return 1;
     }
 
@@ -889,7 +889,7 @@ int main(const int argc, char** argv) {
     if (const char* const subcommand = args[cursor++]; subcommand == "sim"sv) {
         if (args.size() == cursor) {
             usage(thisProgram);
-            std::cerr << "ERROR: no input file is provided for the simulation\n";
+            std::cerr << "[ERROR] no input file is provided for the simulation\n";
             return 1;
         }
         const char* inputFilePath = args[cursor++];
@@ -897,23 +897,23 @@ int main(const int argc, char** argv) {
         try {
             program = loadProgramFromFile(inputFilePath);
         } catch (porth::ParseError& e) {
-            std::cerr << "ERROR: parse: " << e.what() << "\n";
+            std::cerr << "[ERROR] parse: " << e.what() << "\n";
             return 1;
         } catch (porth::SemanticError& e) {
-            std::cerr << "ERROR: semantic: " << e.what() << "\n";
+            std::cerr << "[ERROR] semantic: " << e.what() << "\n";
             return 1;
         }
 
         try {
             simulateProgram(program, debugMode);
         } catch (porth::SimulationError& e) {
-            std::cerr << "ERROR: " << e.what() << "\n";
+            std::cerr << "[ERROR] " << e.what() << "\n";
             return 1;
         }
     } else if (subcommand == "com"sv) {
         if (args.size() == cursor) {
             usage(thisProgram);
-            std::cerr << "ERROR: no input file is provided for the simulation\n";
+            std::cerr << "[ERROR] no input file is provided for the simulation\n";
             return 1;
         }
         const char* inputFilePathOrFlag = args[cursor++];
@@ -927,16 +927,16 @@ int main(const int argc, char** argv) {
                     runExecutable = true;
                 } else if (flag == "o"sv) {
                     if (args.size() == cursor) {
-                        std::cerr << "ERROR: no argument is provided for '-o'\n";
+                        std::cerr << "[ERROR] no argument is provided for '-o'\n";
                         return 1;
                     }
                     outputFilePath = args[cursor++];
                 } else {
-                    std::cerr << "ERROR: unknown flag '" << inputFilePathOrFlag << "'\n";
+                    std::cerr << "[ERROR] unknown flag '" << inputFilePathOrFlag << "'\n";
                     return 1;
                 }
                 if (args.size() == cursor) {
-                    std::cerr << "ERROR: no input file is provided for the simulation\n";
+                    std::cerr << "[ERROR] no input file is provided for the simulation\n";
                     return 1;
                 }
                 inputFilePathOrFlag = args[cursor++];
@@ -949,10 +949,10 @@ int main(const int argc, char** argv) {
         try {
             program = loadProgramFromFile(inputFilePath);
         } catch (porth::ParseError& e) {
-            std::cerr << "ERROR: parse: " << e.what() << "\n";
+            std::cerr << "[ERROR] parse: " << e.what() << "\n";
             return 1;
         } catch (porth::SemanticError& e) {
-            std::cerr << "ERROR: semantic: " << e.what() << "\n";
+            std::cerr << "[ERROR] semantic: " << e.what() << "\n";
             return 1;
         }
 
@@ -970,7 +970,7 @@ int main(const int argc, char** argv) {
         }
     } else {
         usage(thisProgram);
-        std::cerr << "ERROR: unknown subcommand " << args[1] << "\n";
+        std::cerr << "[ERROR] unknown subcommand " << args[1] << "\n";
         return 1;
     }
     return 0;
