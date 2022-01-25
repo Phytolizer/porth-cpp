@@ -29,6 +29,10 @@ Op mem();
 Op load();
 Op store();
 Op syscall1();
+Op syscall2();
 Op syscall3();
+Op syscall4();
+Op syscall5();
+Op syscall6();
 
 } // namespace porth

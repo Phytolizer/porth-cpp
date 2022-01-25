@@ -72,6 +72,22 @@ porth::Op porth::syscall1() {
     return Op{OpIds::Syscall1};
 }
 
+porth::Op porth::syscall2() {
+    return Op{OpIds::Syscall2};
+}
+
 porth::Op porth::syscall3() {
     return Op{OpIds::Syscall3};
+}
+
+porth::Op porth::syscall4() {
+    return Op{OpIds::Syscall4};
+}
+
+porth::Op porth::syscall5() {
+    return Op{OpIds::Syscall5};
+}
+
+porth::Op porth::syscall6() {
+    return Op{OpIds::Syscall6};
 }

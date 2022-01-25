@@ -35,7 +35,7 @@ template <typename T> T vecPop(std::vector<T>& v) {
 }
 
 void simulateProgram(const std::vector<porth::Op>& program) {
-    static_assert(porth::OpIds::Count.discriminant == 17, "Exhaustive handling of OpIds in simulateProgram");
+    static_assert(porth::OpIds::Count.discriminant == 21, "Exhaustive handling of OpIds in simulateProgram");
     std::vector<std::int64_t> stack;
     std::array<std::uint8_t, MEM_CAPACITY> mem;
     // execution is not linear, so we use a for loop with an index
@@ -121,6 +121,8 @@ void simulateProgram(const std::vector<porth::Op>& program) {
             ++ip;
         } else if (op.id == porth::OpIds::Syscall1) {
             throw porth::SimulationError("syscall1: unimplemented");
+        } else if (op.id == porth::OpIds::Syscall2) {
+            throw porth::SimulationError("syscall2: unimplemented");
         } else if (op.id == porth::OpIds::Syscall3) {
             const std::int64_t syscallNumber = vecPop(stack);
             const std::int64_t arg1 = vecPop(stack);
@@ -149,6 +151,12 @@ void simulateProgram(const std::vector<porth::Op>& program) {
                 throw porth::SimulationError(errorMessage.str());
             }
             ++ip;
+        } else if (op.id == porth::OpIds::Syscall4) {
+            throw porth::SimulationError("syscall4: unimplemented");
+        } else if (op.id == porth::OpIds::Syscall5) {
+            throw porth::SimulationError("syscall5: unimplemented");
+        } else if (op.id == porth::OpIds::Syscall6) {
+            throw porth::SimulationError("syscall6: unimplemented");
         }
     }
 }
@@ -181,7 +189,7 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
     ++indent;
     emit(output, indent) << "std::array<std::uint8_t, " << MEM_CAPACITY << "> mem;\n";
     emit(output, indent) << "std::stack<int> _porth_stack;\n";
-    static_assert(porth::OpIds::Count.discriminant == 17, "Exhaustive handling of OpIds in compileProgram");
+    static_assert(porth::OpIds::Count.discriminant == 21, "Exhaustive handling of OpIds in compileProgram");
     for (size_t ip = 0; ip < program.size(); ++ip) {
         const porth::Op& op = program[ip];
         emit(output, indent) << "// -- " << op.id.name << " --\n";
@@ -295,6 +303,9 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
         } else if (op.id == porth::OpIds::Syscall1) {
             std::cerr << "not implemented: syscall1\n";
             return 1;
+        } else if (op.id == porth::OpIds::Syscall2) {
+            std::cerr << "not implemented: syscall2\n";
+            return 1;
         } else if (op.id == porth::OpIds::Syscall3) {
             emit(output, indent) << "{\n";
             ++indent;
@@ -340,6 +351,15 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
             emit(output, indent) << "}\n";
             --indent;
             emit(output, indent) << "}\n";
+        } else if (op.id == porth::OpIds::Syscall4) {
+            std::cerr << "not implemented: syscall4\n";
+            return 1;
+        } else if (op.id == porth::OpIds::Syscall5) {
+            std::cerr << "not implemented: syscall5\n";
+            return 1;
+        } else if (op.id == porth::OpIds::Syscall6) {
+            std::cerr << "not implemented: syscall6\n";
+            return 1;
         }
     }
     output << labelName(static_cast<std::int64_t>(program.size())) << ":\n";
@@ -481,7 +501,7 @@ void usage(const char* thisProgram) {
 
 porth::Op parseTokenAsOp(const porth::Token& token) {
     const auto& [filePath, row, col, word] = token;
-    static_assert(porth::OpIds::Count.discriminant == 17, "Exhaustive handling of OpIds in parseTokenAsOp");
+    static_assert(porth::OpIds::Count.discriminant == 21, "Exhaustive handling of OpIds in parseTokenAsOp");
     if (word == "+") {
         return porth::plus();
     }
@@ -527,8 +547,20 @@ porth::Op parseTokenAsOp(const porth::Token& token) {
     if (word == "syscall1") {
         return porth::syscall1();
     }
+    if (word == "syscall2") {
+        return porth::syscall2();
+    }
     if (word == "syscall3") {
         return porth::syscall3();
+    }
+    if (word == "syscall4") {
+        return porth::syscall4();
+    }
+    if (word == "syscall5") {
+        return porth::syscall5();
+    }
+    if (word == "syscall6") {
+        return porth::syscall6();
     }
     int pushArg;
     if (std::istringstream wordStream{word}; !(wordStream >> pushArg)) {
@@ -546,7 +578,7 @@ template <typename T> T stackPop(std::stack<T>& stack) {
 
 std::vector<porth::Op> crossReferenceBlocks(std::vector<porth::Op>&& program) {
     std::stack<size_t> stack;
-    static_assert(porth::OpIds::Count.discriminant == 17, "Exhaustive handling of OpIds in crossReferenceBlocks");
+    static_assert(porth::OpIds::Count.discriminant == 21, "Exhaustive handling of OpIds in crossReferenceBlocks");
     for (size_t ip = 0; ip < program.size(); ++ip) {
         if (const porth::Op& op = program[ip]; op.id == porth::OpIds::If) {
             stack.push(ip);
