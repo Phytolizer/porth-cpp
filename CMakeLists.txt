@@ -51,8 +51,15 @@ target_include_directories(
 )
 target_link_libraries(subprocess_h_cpp INTERFACE subprocess_h)
 
-set(PORTH_SOURCES "main.cpp" "lexer.cpp" "op.cpp" "parse_error.cpp"
-                  "semantic_error.cpp" "simulation_error.cpp"
+set(PORTH_SOURCES
+    "main.cpp"
+    "com.cpp"
+    "lexer.cpp"
+    "op.cpp"
+    "parse_error.cpp"
+    "semantic_error.cpp"
+    "sim.cpp"
+    "simulation_error.cpp"
 )
 list(TRANSFORM PORTH_SOURCES PREPEND "modules/porth/source/")
 add_executable(
