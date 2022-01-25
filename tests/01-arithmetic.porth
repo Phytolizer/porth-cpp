@@ -1,4 +1,0 @@
-// Test arithmetic.
-34 35 + dump
-500 80 - dump
-10 20 + dump
