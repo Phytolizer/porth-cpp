@@ -67,3 +67,11 @@ porth::Op porth::load() {
 porth::Op porth::store() {
     return Op{OpIds::Store};
 }
+
+porth::Op porth::syscall1() {
+    return Op{OpIds::Syscall1};
+}
+
+porth::Op porth::syscall3() {
+    return Op{OpIds::Syscall3};
+}

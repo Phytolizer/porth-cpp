@@ -35,7 +35,7 @@ template <typename T> T vecPop(std::vector<T>& v) {
 }
 
 void simulateProgram(const std::vector<porth::Op>& program) {
-    static_assert(porth::OpIds::Count.discriminant == 15, "Exhaustive handling of OpIds in simulateProgram");
+    static_assert(porth::OpIds::Count.discriminant == 17, "Exhaustive handling of OpIds in simulateProgram");
     std::vector<std::int64_t> stack;
     std::array<std::uint8_t, MEM_CAPACITY> mem;
     // execution is not linear, so we use a for loop with an index
@@ -91,33 +91,64 @@ void simulateProgram(const std::vector<porth::Op>& program) {
                 ++ip;
             }
         } else if (op.id == porth::OpIds::Mem) {
-            stack.push_back((std::int64_t)(mem.data()));
+            stack.push_back(0);
             ++ip;
         } else if (op.id == porth::OpIds::Load) {
             const std::int64_t a = vecPop(stack);
             // Interpret a as a memory address.
             // Here be dragons.
-            const std::uintptr_t addr = static_cast<std::uintptr_t>(a);
-            const std::uintptr_t memAddr = reinterpret_cast<std::uintptr_t>(mem.data());
-            if (addr < memAddr || addr >= memAddr + mem.size()) {
+            const std::uintptr_t addr = static_cast<std::size_t>(a);
+            if (addr >= mem.size()) {
                 std::ostringstream errorMessage;
                 errorMessage << "load: invalid memory address " << addr;
                 throw porth::SimulationError(errorMessage.str());
             }
-            const std::uint8_t b = *reinterpret_cast<const std::uint8_t*>(addr);
+            const std::uint8_t b = mem[addr];
             stack.push_back(static_cast<std::int64_t>(b));
+            ++ip;
         } else if (op.id == porth::OpIds::Store) {
+            const std::int64_t b = vecPop(stack);
             const std::int64_t a = vecPop(stack);
             // Interpret a as a memory address.
             // Here be dragons.
-            const std::uintptr_t addr = static_cast<std::uintptr_t>(a);
-            const std::uintptr_t memAddr = reinterpret_cast<std::uintptr_t>(mem.data());
-            if (addr < memAddr || addr >= memAddr + mem.size()) {
+            const std::uintptr_t addr = static_cast<std::size_t>(a);
+            if (addr >= mem.size()) {
                 std::ostringstream errorMessage;
                 errorMessage << "store: invalid memory address " << addr;
                 throw porth::SimulationError(errorMessage.str());
             }
-            *reinterpret_cast<std::uint8_t*>(addr) = static_cast<std::uint8_t>(stack.back());
+            mem[addr] = static_cast<std::uint8_t>(b);
+            ++ip;
+        } else if (op.id == porth::OpIds::Syscall1) {
+            throw porth::SimulationError("syscall1: unimplemented");
+        } else if (op.id == porth::OpIds::Syscall3) {
+            const std::int64_t syscallNumber = vecPop(stack);
+            const std::int64_t arg1 = vecPop(stack);
+            const std::int64_t arg2 = vecPop(stack);
+            const std::int64_t arg3 = vecPop(stack);
+            if (syscallNumber == 1) {
+                const std::int64_t fd = arg1;
+                const std::int64_t buf = arg2;
+                const std::int64_t count = arg3;
+                const std::string_view s = {
+                    reinterpret_cast<const char*>(&mem[buf]),
+                    reinterpret_cast<const char*>(&mem[buf + count]),
+                };
+                if (fd == 1) {
+                    std::cout << s;
+                } else if (fd == 2) {
+                    std::cerr << s;
+                } else {
+                    std::ostringstream errorMessage;
+                    errorMessage << "syscall3: unknown file descriptor " << fd;
+                    throw porth::SimulationError(errorMessage.str());
+                }
+            } else {
+                std::ostringstream errorMessage;
+                errorMessage << "syscall3: unknown syscall " << syscallNumber;
+                throw porth::SimulationError(errorMessage.str());
+            }
+            ++ip;
         }
     }
 }
@@ -150,7 +181,7 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
     ++indent;
     emit(output, indent) << "std::array<std::uint8_t, " << MEM_CAPACITY << "> mem;\n";
     emit(output, indent) << "std::stack<int> _porth_stack;\n";
-    static_assert(porth::OpIds::Count.discriminant == 15, "Exhaustive handling of OpIds in compileProgram");
+    static_assert(porth::OpIds::Count.discriminant == 17, "Exhaustive handling of OpIds in compileProgram");
     for (size_t ip = 0; ip < program.size(); ++ip) {
         const porth::Op& op = program[ip];
         emit(output, indent) << "// -- " << op.id.name << " --\n";
@@ -239,27 +270,74 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
             --indent;
             emit(output, indent) << "}\n";
         } else if (op.id == porth::OpIds::Mem) {
-            emit(output, indent) << "_porth_stack.push(reinterpret_cast<std::int64_t>(mem.data()));\n";
+            emit(output, indent) << "_porth_stack.push(0);\n";
         } else if (op.id == porth::OpIds::Load) {
             emit(output, indent) << "{\n";
             ++indent;
             emit(output, indent) << "auto a = _porth_stack.top();\n";
             emit(output, indent) << "_porth_stack.pop();\n";
-            emit(output, indent) << "auto addr = static_cast<std::uintptr_t>(a);\n";
-            emit(output, indent) << "auto b = *reinterpret_cast<const std::uint8_t*>(addr);\n";
+            emit(output, indent) << "auto addr = static_cast<std::size_t>(a);\n";
+            emit(output, indent) << "auto b = mem.at(addr);\n";
             emit(output, indent) << "_porth_stack.push(static_cast<std::int64_t>(b));\n";
             --indent;
             emit(output, indent) << "}\n";
         } else if (op.id == porth::OpIds::Store) {
             emit(output, indent) << "{\n";
             ++indent;
-            emit(output, indent) << "auto a = _porth_stack.top();\n";
-            emit(output, indent) << "_porth_stack.pop();\n";
-            emit(output, indent) << "auto addr = static_cast<std::uintptr_t>(a);\n";
-            emit(output, indent) << "auto* p = reinterpret_cast<std::uint8_t*>(addr);\n";
             emit(output, indent) << "auto b = _porth_stack.top();\n";
             emit(output, indent) << "_porth_stack.pop();\n";
-            emit(output, indent) << "*p = static_cast<std::uint8_t>(b);\n";
+            emit(output, indent) << "auto a = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "auto addr = static_cast<std::size_t>(a);\n";
+            emit(output, indent) << "mem.at(addr) = static_cast<std::uint8_t>(b);\n";
+            --indent;
+            emit(output, indent) << "}\n";
+        } else if (op.id == porth::OpIds::Syscall1) {
+            std::cerr << "not implemented: syscall1\n";
+            return 1;
+        } else if (op.id == porth::OpIds::Syscall3) {
+            emit(output, indent) << "{\n";
+            ++indent;
+            emit(output, indent) << "auto syscallNumber = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "auto arg1 = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "auto arg2 = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "auto arg3 = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "if (syscallNumber == 1) {\n";
+            ++indent;
+            emit(output, indent) << "auto fd = arg1;\n";
+            emit(output, indent) << "auto buf = arg2;\n";
+            emit(output, indent) << "auto count = arg3;\n";
+            emit(output, indent) << "const std::string_view s = {\n";
+            ++indent;
+            emit(output, indent) << "reinterpret_cast<const char*>(&mem[buf]),\n";
+            emit(output, indent) << "reinterpret_cast<const char*>(&mem[buf + count]),\n";
+            --indent;
+            emit(output, indent) << "};\n";
+            emit(output, indent) << "if (fd == 1) {\n";
+            ++indent;
+            emit(output, indent) << "std::cout << s;\n";
+            --indent;
+            emit(output, indent) << "} else if (fd == 2) {\n";
+            ++indent;
+            emit(output, indent) << "std::cerr << s;\n";
+            --indent;
+            emit(output, indent) << "} else {\n";
+            ++indent;
+            emit(output, indent) << "std::cerr << \"syscall3: unknown file descriptor \" << fd;\n";
+            emit(output, indent) << "return 1;\n";
+            --indent;
+            emit(output, indent) << "}\n";
+            --indent;
+            emit(output, indent) << "} else {\n";
+            ++indent;
+            emit(output, indent) << "std::cerr << \"syscall3: unknown syscall \" << syscallNumber;\n";
+            emit(output, indent) << "return 1;\n";
+            --indent;
+            emit(output, indent) << "}\n";
             --indent;
             emit(output, indent) << "}\n";
         }
@@ -403,7 +481,7 @@ void usage(const char* thisProgram) {
 
 porth::Op parseTokenAsOp(const porth::Token& token) {
     const auto& [filePath, row, col, word] = token;
-    static_assert(porth::OpIds::Count.discriminant == 15, "Exhaustive handling of OpIds in parseTokenAsOp");
+    static_assert(porth::OpIds::Count.discriminant == 17, "Exhaustive handling of OpIds in parseTokenAsOp");
     if (word == "+") {
         return porth::plus();
     }
@@ -440,11 +518,17 @@ porth::Op parseTokenAsOp(const porth::Token& token) {
     if (word == "mem") {
         return porth::mem();
     }
-    if (word == "load") {
+    if (word == ",") {
         return porth::load();
     }
-    if (word == "store") {
+    if (word == ".") {
         return porth::store();
+    }
+    if (word == "syscall1") {
+        return porth::syscall1();
+    }
+    if (word == "syscall3") {
+        return porth::syscall3();
     }
     int pushArg;
     if (std::istringstream wordStream{word}; !(wordStream >> pushArg)) {
@@ -462,7 +546,7 @@ template <typename T> T stackPop(std::stack<T>& stack) {
 
 std::vector<porth::Op> crossReferenceBlocks(std::vector<porth::Op>&& program) {
     std::stack<size_t> stack;
-    static_assert(porth::OpIds::Count.discriminant == 15, "Exhaustive handling of OpIds in crossReferenceBlocks");
+    static_assert(porth::OpIds::Count.discriminant == 17, "Exhaustive handling of OpIds in crossReferenceBlocks");
     for (size_t ip = 0; ip < program.size(); ++ip) {
         if (const porth::Op& op = program[ip]; op.id == porth::OpIds::If) {
             stack.push(ip);
@@ -529,7 +613,12 @@ int main(const int argc, char** argv) {
             return 1;
         }
 
-        simulateProgram(program);
+        try {
+            simulateProgram(program);
+        } catch (porth::SimulationError& e) {
+            std::cerr << "ERROR: " << e.what() << "\n";
+            return 1;
+        }
     } else if (subcommand == "com"sv) {
         if (args.size() == cursor) {
             usage(thisProgram);

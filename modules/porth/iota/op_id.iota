@@ -14,4 +14,6 @@ porth::OpId = iota {
     Mem,
     Load,
     Store,
+    Syscall1,
+    Syscall3,
 };
