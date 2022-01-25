@@ -35,7 +35,7 @@ template <typename T> T vecPop(std::vector<T>& v) {
 }
 
 void simulateProgram(const std::vector<porth::Op>& program, bool debugMode) {
-    static_assert(porth::OpIds::Count.discriminant == 25, "Exhaustive handling of OpIds in simulateProgram");
+    static_assert(porth::OpIds::Count.discriminant == 29, "Exhaustive handling of OpIds in simulateProgram");
     std::vector<std::int64_t> stack;
     std::array<std::uint8_t, MEM_CAPACITY> mem{};
     // execution is not linear, so we use a for loop with an index
@@ -179,6 +179,26 @@ void simulateProgram(const std::vector<porth::Op>& program, bool debugMode) {
             throw porth::SimulationError("syscall5: unimplemented");
         } else if (op.id == porth::OpIds::Syscall6) {
             throw porth::SimulationError("syscall6: unimplemented");
+        } else if (op.id == porth::OpIds::Shr) {
+            const std::int64_t b = vecPop(stack);
+            const std::int64_t a = vecPop(stack);
+            stack.push_back(a >> b);
+            ++ip;
+        } else if (op.id == porth::OpIds::Shl) {
+            const std::int64_t b = vecPop(stack);
+            const std::int64_t a = vecPop(stack);
+            stack.push_back(a << b);
+            ++ip;
+        } else if (op.id == porth::OpIds::Bor) {
+            const std::int64_t b = vecPop(stack);
+            const std::int64_t a = vecPop(stack);
+            stack.push_back(a | b);
+            ++ip;
+        } else if (op.id == porth::OpIds::Band) {
+            const std::int64_t b = vecPop(stack);
+            const std::int64_t a = vecPop(stack);
+            stack.push_back(a & b);
+            ++ip;
         }
     }
     if (debugMode) {
@@ -216,7 +236,7 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
     ++indent;
     emit(output, indent) << "std::array<std::uint8_t, " << MEM_CAPACITY << "> mem;\n";
     emit(output, indent) << "std::stack<int> _porth_stack;\n";
-    static_assert(porth::OpIds::Count.discriminant == 25, "Exhaustive handling of OpIds in compileProgram");
+    static_assert(porth::OpIds::Count.discriminant == 29, "Exhaustive handling of OpIds in compileProgram");
     for (size_t ip = 0; ip < program.size(); ++ip) {
         const porth::Op& op = program[ip];
         emit(output, indent) << "// -- " << op.id.name << " --\n";
@@ -423,6 +443,46 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
         } else if (op.id == porth::OpIds::Syscall6) {
             std::cerr << "not implemented: syscall6\n";
             return 1;
+        } else if (op.id == porth::OpIds::Shr) {
+            emit(output, indent) << "{\n";
+            ++indent;
+            emit(output, indent) << "auto b = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "auto a = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "_porth_stack.push(a >> b);\n";
+            --indent;
+            emit(output, indent) << "}\n";
+        } else if (op.id == porth::OpIds::Shl) {
+            emit(output, indent) << "{\n";
+            ++indent;
+            emit(output, indent) << "auto b = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "auto a = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "_porth_stack.push(a << b);\n";
+            --indent;
+            emit(output, indent) << "}\n";
+        } else if (op.id == porth::OpIds::Bor) {
+            emit(output, indent) << "{\n";
+            ++indent;
+            emit(output, indent) << "auto b = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "auto a = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "_porth_stack.push(a | b);\n";
+            --indent;
+            emit(output, indent) << "}\n";
+        } else if (op.id == porth::OpIds::Band) {
+            emit(output, indent) << "{\n";
+            ++indent;
+            emit(output, indent) << "auto b = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "auto a = _porth_stack.top();\n";
+            emit(output, indent) << "_porth_stack.pop();\n";
+            emit(output, indent) << "_porth_stack.push(a & b);\n";
+            --indent;
+            emit(output, indent) << "}\n";
         }
     }
     output << labelName(static_cast<std::int64_t>(program.size())) << ":\n";
@@ -567,7 +627,7 @@ void usage(const char* thisProgram) {
 
 porth::Op parseTokenAsOp(const porth::Token& token) {
     const auto& [filePath, row, col, word] = token;
-    static_assert(porth::OpIds::Count.discriminant == 25, "Exhaustive handling of OpIds in parseTokenAsOp");
+    static_assert(porth::OpIds::Count.discriminant == 29, "Exhaustive handling of OpIds in parseTokenAsOp");
     if (word == "+") {
         return porth::plus();
     }
@@ -640,6 +700,18 @@ porth::Op parseTokenAsOp(const porth::Token& token) {
     if (word == "syscall6") {
         return porth::syscall6();
     }
+    if (word == "shr") {
+        return porth::shr();
+    }
+    if (word == "shl") {
+        return porth::shl();
+    }
+    if (word == "bor") {
+        return porth::bor();
+    }
+    if (word == "band") {
+        return porth::band();
+    }
     int pushArg;
     if (std::istringstream wordStream{word}; !(wordStream >> pushArg)) {
         std::cerr << filePath << ":" << row << ":" << col << ": attempt to convert non-integer value\n";
@@ -656,7 +728,7 @@ template <typename T> T stackPop(std::stack<T>& stack) {
 
 std::vector<porth::Op> crossReferenceBlocks(std::vector<porth::Op>&& program) {
     std::stack<size_t> stack;
-    static_assert(porth::OpIds::Count.discriminant == 25, "Exhaustive handling of OpIds in crossReferenceBlocks");
+    static_assert(porth::OpIds::Count.discriminant == 29, "Exhaustive handling of OpIds in crossReferenceBlocks");
     for (size_t ip = 0; ip < program.size(); ++ip) {
         if (const porth::Op& op = program[ip]; op.id == porth::OpIds::If) {
             stack.push(ip);
@@ -709,6 +781,7 @@ int main(const int argc, char** argv) {
 
     while (args.size() > cursor) {
         if (args[cursor] == "-debug"sv) {
+            ++cursor;
             debugMode = true;
         } else {
             break;

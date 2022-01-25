@@ -24,4 +24,8 @@ porth::OpId = iota {
     Syscall4,
     Syscall5,
     Syscall6,
+    Shr,
+    Shl,
+    Bor,
+    Band,
 };

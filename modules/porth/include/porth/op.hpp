@@ -38,5 +38,9 @@ Op syscall3();
 Op syscall4();
 Op syscall5();
 Op syscall6();
+Op shr();
+Op shl();
+Op bor();
+Op band();
 
 } // namespace porth

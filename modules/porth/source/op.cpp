@@ -107,3 +107,15 @@ porth::Op porth::syscall5() {
 porth::Op porth::syscall6() {
     return Op{OpIds::Syscall6};
 }
+porth::Op porth::shr() {
+    return Op{OpIds::Shr};
+}
+porth::Op porth::shl() {
+    return Op{OpIds::Shl};
+}
+porth::Op porth::bor() {
+    return Op{OpIds::Bor};
+}
+porth::Op porth::band() {
+    return Op{OpIds::Band};
+}
