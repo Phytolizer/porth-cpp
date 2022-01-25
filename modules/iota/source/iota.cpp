@@ -98,6 +98,10 @@ std::vector<Token> lex(const std::istream& input) {
     Lexer lexer(sourceTextStream.str());
     while (!lexer.atEnd()) {
         lexer.startToken();
+        // handle trailing whitespace
+        if (lexer.atEnd()) {
+            break;
+        }
         auto kind = TokenKind::Identifier;
         std::string tokenText;
         if (lexer.current() == '=') {
@@ -115,6 +119,9 @@ std::vector<Token> lex(const std::istream& input) {
         } else if (lexer.current() == ':' && lexer.peek() == ':') {
             kind = TokenKind::ColonColon;
             ++lexer;
+            ++lexer;
+        } else if (lexer.current() == ';') {
+            kind = TokenKind::Semicolon;
             ++lexer;
         } else if (lexer.atIdentifierStart()) {
             while (lexer.atIdentifierPart()) {
@@ -172,6 +179,14 @@ struct Parser {
         return it != tokens.end() && it->kind == kind;
     }
 
+    bool match(const TokenKind kind) {
+        if (atToken(kind)) {
+            ++it;
+            return true;
+        }
+        return false;
+    }
+
     void pushNamespace(Token&& ns) {
         iota.namespaces.emplace_back(std::move(ns));
     }
@@ -208,7 +223,6 @@ Iota parse(const std::vector<Token>& tokens) {
             parser.pushNamespace(std::move(ident));
             ++parser;
             ident = parser.consume(TokenKind::Identifier, "'::' must be followed by an identifier");
-            ++parser;
         }
         parser.iota.name = std::move(ident);
     } else {
