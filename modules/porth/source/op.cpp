@@ -122,3 +122,6 @@ porth::Op porth::band() {
 porth::Op porth::over() {
     return Op{OpIds::Over};
 }
+porth::Op porth::mod() {
+    return Op{OpIds::Mod};
+}
