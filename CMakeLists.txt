@@ -43,9 +43,13 @@ add_custom_command(
 )
 
 add_library(subprocess_h INTERFACE)
+target_include_directories(subprocess_h INTERFACE "modules/subprocess_h")
+
+add_library(subprocess_h_cpp INTERFACE)
 target_include_directories(
-    subprocess_h INTERFACE "modules/subprocess_h/include"
+    subprocess_h_cpp INTERFACE "modules/subprocess_h_cpp/include"
 )
+target_link_libraries(subprocess_h_cpp INTERFACE subprocess_h)
 
 add_executable(
     porth_cpp
@@ -53,7 +57,7 @@ add_executable(
     "modules/porth/source/op.cpp"
     "${PROJECT_BINARY_DIR}/include/iota_generated/op_id.hpp"
 )
-target_link_libraries(porth_cpp PRIVATE subprocess_h span ranges)
+target_link_libraries(porth_cpp PRIVATE subprocess_h_cpp span ranges)
 target_include_directories(
     porth_cpp PRIVATE "modules/porth/include" "${PROJECT_BINARY_DIR}/include"
 )
@@ -69,7 +73,7 @@ add_executable(
                "${PROJECT_BINARY_DIR}/include/testconfig.hpp"
 )
 add_dependencies(porth_test porth_cpp)
-target_link_libraries(porth_test PRIVATE subprocess_h)
+target_link_libraries(porth_test PRIVATE subprocess_h_cpp)
 target_include_directories(porth_test PRIVATE "${PROJECT_BINARY_DIR}/include")
 
 if(PROJECT_IS_TOP_LEVEL)

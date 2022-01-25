@@ -11,8 +11,8 @@
 #include <sstream>
 #include <stack>
 #include <string_view>
+#include <subprocess.h>
 #include <subprocess/destroy_guard.hpp>
-#include <subprocess/subprocess.h>
 #include <vector>
 
 using namespace std::string_view_literals;

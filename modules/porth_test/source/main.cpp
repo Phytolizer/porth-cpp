@@ -6,8 +6,8 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <subprocess.h>
 #include <subprocess/destroy_guard.hpp>
-#include <subprocess/subprocess.h>
 #include <testconfig.hpp>
 #include <vector>
 
