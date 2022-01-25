@@ -20,8 +20,8 @@ porth::Op porth::minus() {
     return Op{OpIds::Minus};
 }
 
-porth::Op porth::equal() {
-    return Op{OpIds::Equal};
+porth::Op porth::eq() {
+    return Op{OpIds::Eq};
 }
 
 porth::Op porth::gt() {

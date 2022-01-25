@@ -2,7 +2,7 @@ porth::OpId = iota {
     Push,
     Plus,
     Minus,
-    Equal,
+    Eq,
     Gt,
     Lt,
     Ge,

@@ -53,7 +53,7 @@ void simulateProgram(const std::vector<porth::Op>& program, bool debugMode) {
             const std::int64_t a = vecPop(stack);
             stack.push_back(a - b);
             ++ip;
-        } else if (op.id == porth::OpIds::Equal) {
+        } else if (op.id == porth::OpIds::Eq) {
             const std::int64_t b = vecPop(stack);
             const std::int64_t a = vecPop(stack);
             stack.push_back(a == b ? 1 : 0);
@@ -285,7 +285,7 @@ int compileProgram(const std::vector<porth::Op>& program, const std::string& out
             emit(output, indent) << "_porth_stack.push(a - b);\n";
             --indent;
             emit(output, indent) << "}\n";
-        } else if (op.id == porth::OpIds::Equal) {
+        } else if (op.id == porth::OpIds::Eq) {
             emit(output, indent) << "{\n";
             ++indent;
             emit(output, indent) << "auto b = _porth_stack.top();\n";
@@ -699,7 +699,7 @@ porth::Op parseTokenAsOp(const porth::Token& token) {
         return porth::minus();
     }
     if (word == "=") {
-        return porth::equal();
+        return porth::eq();
     }
     if (word == ">") {
         return porth::gt();

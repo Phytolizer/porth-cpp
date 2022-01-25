@@ -16,7 +16,7 @@ struct Op {
 Op push(int x);
 Op plus();
 Op minus();
-Op equal();
+Op eq();
 Op gt();
 Op lt();
 Op ge();
