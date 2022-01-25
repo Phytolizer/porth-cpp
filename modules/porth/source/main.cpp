@@ -34,7 +34,7 @@ template <typename T> T vecPop(std::vector<T>& v) {
     return result;
 }
 
-void simulateProgram(const std::vector<porth::Op>& program) {
+void simulateProgram(const std::vector<porth::Op>& program, bool debugMode) {
     static_assert(porth::OpIds::Count.discriminant == 25, "Exhaustive handling of OpIds in simulateProgram");
     std::vector<std::int64_t> stack;
     std::array<std::uint8_t, MEM_CAPACITY> mem{};
@@ -180,6 +180,11 @@ void simulateProgram(const std::vector<porth::Op>& program) {
         } else if (op.id == porth::OpIds::Syscall6) {
             throw porth::SimulationError("syscall6: unimplemented");
         }
+    }
+    if (debugMode) {
+        std::cout << "[INFO] Memory dump\n";
+        const std::string_view s{reinterpret_cast<const char*>(mem.data()), 20};
+        std::cout << s << "\n";
     }
 }
 
@@ -700,6 +705,20 @@ int main(const int argc, char** argv) {
         return 1;
     }
 
+    bool debugMode = false;
+
+    while (args.size() > cursor) {
+        if (args[cursor] == "-debug"sv) {
+            debugMode = true;
+        } else {
+            break;
+        }
+    }
+
+    if (debugMode) {
+        std::cout << "[INFO] Debug mode is enabled\n";
+    }
+
     if (const char* const subcommand = args[cursor++]; subcommand == "sim"sv) {
         if (args.size() == cursor) {
             usage(thisProgram);
@@ -719,7 +738,7 @@ int main(const int argc, char** argv) {
         }
 
         try {
-            simulateProgram(program);
+            simulateProgram(program, debugMode);
         } catch (porth::SimulationError& e) {
             std::cerr << "ERROR: " << e.what() << "\n";
             return 1;
