@@ -19,6 +19,8 @@ Op minus();
 Op equal();
 Op gt();
 Op lt();
+Op ge();
+Op le();
 Op iff();
 Op elze();
 Op end();

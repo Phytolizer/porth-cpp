@@ -32,6 +32,14 @@ porth::Op porth::lt() {
     return Op{OpIds::Lt};
 }
 
+porth::Op porth::ge() {
+    return Op{OpIds::Ge};
+}
+
+porth::Op porth::le() {
+    return Op{OpIds::Le};
+}
+
 porth::Op porth::iff() {
     return Op{OpIds::If};
 }

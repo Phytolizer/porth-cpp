@@ -5,6 +5,8 @@ porth::OpId = iota {
     Equal,
     Gt,
     Lt,
+    Ge,
+    Le,
     If,
     Else,
     End,
