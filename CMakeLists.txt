@@ -75,7 +75,7 @@ add_executable(
                "${PROJECT_BINARY_DIR}/include/testconfig.hpp"
 )
 add_dependencies(porth_test porth_cpp)
-target_link_libraries(porth_test PRIVATE subprocess_h_cpp)
+target_link_libraries(porth_test PRIVATE subprocess_h_cpp span)
 target_include_directories(porth_test PRIVATE "${PROJECT_BINARY_DIR}/include")
 
 if(PROJECT_IS_TOP_LEVEL)
