@@ -42,5 +42,6 @@ Op shr();
 Op shl();
 Op bor();
 Op band();
+Op over();
 
 } // namespace porth
