@@ -56,6 +56,10 @@ porth::Op porth::dup2() {
     return Op{OpIds::Dup2};
 }
 
+porth::Op porth::swap() {
+    return Op{OpIds::Swap};
+}
+
 porth::Op porth::wile() {
     return Op{OpIds::While};
 }

@@ -25,6 +25,7 @@ Op end();
 Op dump();
 Op dup();
 Op dup2();
+Op swap();
 Op wile();
 Op doo();
 Op mem();
